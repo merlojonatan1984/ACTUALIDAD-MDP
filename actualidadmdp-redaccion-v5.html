@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Redacción — Actualidad MDP</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --navy:#0b1f2e;--sea:#0e3d5c;--accent:#00aaff;--red:#d42b2b;
+  --green:#1a8f4a;--white:#fff;--bg:#f0f2f5;--text:#0f1923;
+  --muted:#5a6472;--border:#dde2e8;--yellow:#f59e0b;--yelllow-bg:#fffbf0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+.header{background:var(--navy);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:3px}
+.logo span{color:var(--accent)}
+.badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:3px 10px;border-radius:2px;letter-spacing:1px}
+
+/* MEDIOS RAPIDOS */
+.medios-bar{background:var(--sea);padding:8px 16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0;align-items:center}
+.medios-bar::-webkit-scrollbar{display:none}
+.medios-label{font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;margin-right:4px}
+.medio-btn{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.15);border-radius:4px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;text-decoration:none;display:inline-block}
+.medio-btn:hover{background:rgba(255,255,255,0.2);color:#fff}
+.medio-btn.local{border-color:#00aaff40;color:#7dd3fc}
+.medio-btn.nacional{border-color:#fbbf2440;color:#fcd34d}
+.medio-btn.inter{border-color:#6ee7b740;color:#6ee7b7}
+
+/* MAIN */
+.main{display:grid;grid-template-columns:1fr 1fr;flex:1;gap:0;min-height:0;height:calc(100vh - 100px)}
+
+/* PANELES */
+.panel{display:flex;flex-direction:column;overflow:hidden}
+.panel-left{border-right:1px solid var(--border);background:var(--white)}
+.panel-right{background:#fafbfc}
+
+.panel-head{padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.panel-head-title{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--navy);margin-bottom:8px}
+
+/* LINK INPUT */
+.link-area{display:flex;gap:8px;align-items:center}
+.link-input{flex:1;border:2px solid var(--border);border-radius:6px;padding:9px 12px;font-size:12px;font-family:'Source Sans 3',sans-serif;color:var(--text);outline:none;transition:border .15s}
+.link-input:focus{border-color:var(--accent)}
+.btn-abrir{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:9px 16px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s}
+.btn-abrir:hover{background:#0088cc}
+.btn-abrir:disabled{opacity:0.5;cursor:not-allowed}
+
+/* INSTRUCCION */
+.instruccion{background:#f0f8ff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 13px;margin-top:10px;font-size:11px;color:#1e40af;line-height:1.7}
+.instruccion strong{display:block;margin-bottom:3px;font-size:12px}
+.paso{display:flex;gap:8px;align-items:flex-start;margin-bottom:4px}
+.paso-n{background:#00aaff;color:#fff;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* TEXTO ORIGINAL */
+.texto-area{flex:1;display:flex;flex-direction:column;padding:12px 16px;gap:8px;overflow-y:auto}
+.field-label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:3px;display:block}
+.field-textarea{width:100%;border:1.5px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;font-family:'Source Sans 3',sans-serif;color:var(--text);outline:none;transition:border .15s;resize:none;line-height:1.7}
+.field-textarea:focus{border-color:var(--accent)}
+.field-textarea.original{background:#fffbf0;border-color:#fcd34d;min-height:200px}
+.field-input{width:100%;border:1.5px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;font-family:'Source Sans 3',sans-serif;color:var(--text);outline:none;transition:border .15s}
+.field-input:focus{border-color:var(--accent)}
+.field-select{appearance:none;background:var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1 3l4 4 4-4' stroke='%23666' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;padding-right:28px;cursor:pointer}
+.word-count{font-size:10px;color:var(--muted);text-align:right}
+
+/* EDITOR PANEL */
+.editor-actions{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--white)}
+.btn{border:none;border-radius:4px;padding:7px 13px;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.5px;transition:all .15s;display:flex;align-items:center;gap:4px;white-space:nowrap}
+.btn-ai{background:var(--navy);color:#fff}
+.btn-ai:hover{background:var(--sea)}
+.btn-ampliar{background:var(--sea);color:#fff}
+.btn-ampliar:hover{background:var(--navy)}
+.btn-titular{background:var(--yellow);color:#fff}
+.btn-titular:hover{background:#d97706}
+.btn-copy{background:var(--green);color:#fff}
+.btn-copy:hover{background:#146b38}
+.btn-limpiar{background:var(--border);color:var(--muted)}
+.btn-limpiar:hover{background:#ccc}
+
+.editor-scroll{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+
+/* STATUS */
+.status-bar{padding:7px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);background:var(--white);flex-shrink:0;display:flex;align-items:center;gap:6px}
+.status-bar.ok{color:var(--green)}
+.status-bar.loading{color:var(--accent)}
+.status-bar.err{color:var(--red)}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.pulsing{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* HISTORIAL */
+.historial{border-top:1px solid var(--border);flex-shrink:0}
+.historial-toggle{padding:8px 16px;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:6px;letter-spacing:1px;text-transform:uppercase}
+.historial-toggle:hover{color:var(--navy)}
+.historial-list{max-height:120px;overflow-y:auto;padding:0 16px 8px}
+.hist-item{padding:5px 8px;border-radius:4px;font-size:11px;color:var(--navy);cursor:pointer;border:1px solid var(--border);margin-bottom:4px;background:var(--white);display:flex;align-items:center;gap:6px}
+.hist-item:hover{border-color:var(--accent);background:#f0f8ff}
+.hist-item span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-item small{color:var(--muted);font-size:9px;white-space:nowrap}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:10px 18px;border-radius:6px;font-size:12px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+.toast.show{opacity:1}
+
+@media(max-width:700px){.main{grid-template-columns:1fr;height:auto}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<!-- MODAL CLAVE API -->
+<div id="modal-api" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:28px 32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:#0b1f2e;letter-spacing:2px;margin-bottom:4px">ACTUALIDAD <span style="color:#00aaff">MDP</span></div>
+    <div style="font-size:11px;color:#5a6472;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px">Panel de Redacción</div>
+    <div style="font-size:13px;font-weight:700;color:#0b1f2e;margin-bottom:6px">Ingresá tu clave API de Anthropic</div>
+    <div style="font-size:11px;color:#5a6472;line-height:1.6;margin-bottom:14px">La clave se guarda solo en tu navegador y nunca sale de tu computadora. Nadie más puede verla.</div>
+    <input id="api-key-input" type="password" placeholder="sk-ant-api03-..." style="width:100%;border:2px solid #dde2e8;border-radius:6px;padding:10px 12px;font-size:13px;font-family:'Source Sans 3',sans-serif;outline:none;margin-bottom:10px"/>
+    <div style="font-size:10px;color:#5a6472;margin-bottom:16px">Obtené tu clave en <strong>console.anthropic.com</strong> → API Keys → Crear clave</div>
+    <button onclick="guardarApiKey()" style="width:100%;background:#0b1f2e;color:#fff;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.5px">Entrar al panel →</button>
+    <div id="api-error" style="color:#d42b2b;font-size:11px;margin-top:8px;display:none">La clave no es válida. Verificá que empiece con sk-ant-</div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="logo">ACTUALIDAD <span>MDP</span> <span style="font-family:'Source Sans 3',sans-serif;font-size:13px;font-weight:500;color:rgba(255,255,255,0.4);letter-spacing:0"> · Redacción</span></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span style="font-size:10px;color:rgba(255,255,255,0.35)" id="reloj"></span>
+    <span class="badge">PRIVADO</span>
+  </div>
+</div>
+
+<!-- MEDIOS RÁPIDOS -->
+<div class="medios-bar">
+  <span class="medios-label">Ir a:</span>
+  <a class="medio-btn local" href="https://www.0223.com.ar" target="_blank">0223</a>
+  <a class="medio-btn local" href="https://www.lacapitalmdp.com" target="_blank">La Capital</a>
+  <a class="medio-btn local" href="https://ahoramardelplata.com.ar" target="_blank">Ahora MDP</a>
+  <a class="medio-btn local" href="https://www.infobrisas.com" target="_blank">Infobrisas</a>
+  <a class="medio-btn local" href="https://puntonoticias.com" target="_blank">Punto Noticias</a>
+  <a class="medio-btn local" href="https://www.mardelplataweb.com" target="_blank">MDP Web</a>
+  <a class="medio-btn local" href="https://www.elmarplatense.com" target="_blank">El Marplatense</a>
+  <span style="color:rgba(255,255,255,0.2);margin:0 4px">|</span>
+  <a class="medio-btn nacional" href="https://www.infobae.com" target="_blank">Infobae</a>
+  <a class="medio-btn nacional" href="https://www.clarin.com" target="_blank">Clarín</a>
+  <a class="medio-btn nacional" href="https://www.lanacion.com.ar" target="_blank">La Nación</a>
+  <a class="medio-btn nacional" href="https://tn.com.ar" target="_blank">TN</a>
+  <a class="medio-btn nacional" href="https://www.pagina12.com.ar" target="_blank">Página 12</a>
+  <a class="medio-btn nacional" href="https://www.ambito.com" target="_blank">Ámbito</a>
+  <span style="color:rgba(255,255,255,0.2);margin:0 4px">|</span>
+  <a class="medio-btn inter" href="https://www.bbc.com/mundo" target="_blank">BBC</a>
+  <a class="medio-btn inter" href="https://cnnespanol.cnn.com" target="_blank">CNN</a>
+  <a class="medio-btn inter" href="https://elpais.com" target="_blank">El País</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- PANEL IZQUIERDO: FUENTE -->
+  <div class="panel panel-left">
+    <div class="panel-head">
+      <div class="panel-head-title">📰 Noticia que querés usar</div>
+      <div class="link-area">
+        <input class="link-input" id="link-input" placeholder="Pegá el link de la noticia acá..." type="url"/>
+        <button class="btn-abrir" onclick="abrirLink()">Abrir →</button>
+      </div>
+      <div class="instruccion">
+        <strong>¿Cómo usarlo?</strong>
+        <div class="paso"><span class="paso-n">1</span><span>Hacé clic en un medio arriba (azul = local, amarillo = nacional, verde = internacional)</span></div>
+        <div class="paso"><span class="paso-n">2</span><span>Encontrá la noticia que querés usar en tu portal</span></div>
+        <div class="paso"><span class="paso-n">3</span><span>Copiá el link de esa noticia y pegalo arriba</span></div>
+        <div class="paso"><span class="paso-n">4</span><span>Copiá el texto completo de la nota y pegalo abajo</span></div>
+        <div class="paso"><span class="paso-n">5</span><span>Usá los botones del panel derecho para reescribirla con IA</span></div>
+      </div>
+    </div>
+
+    <div class="texto-area">
+      <div>
+        <label class="field-label">📋 Pegá acá el texto completo de la noticia original</label>
+        <textarea class="field-textarea original" id="texto-original" placeholder="Copiá todo el texto de la noticia (título + cuerpo) y pegalo acá. Cuanto más texto, mejor va a quedar la reescritura con IA..." oninput="actualizarDesdeOriginal()"></textarea>
+        <div class="word-count" id="wc-original">0 palabras</div>
+      </div>
+      <div>
+        <label class="field-label">🔗 Fuente / medio</label>
+        <input class="field-input" id="fuente-input" placeholder="Ej: La Capital MDP, TN, Infobae..."/>
+      </div>
+    </div>
+
+    <!-- HISTORIAL -->
+    <div class="historial">
+      <div class="historial-toggle" onclick="toggleHistorial()">
+        📁 Historial de notas <span id="hist-arrow">▸</span>
+      </div>
+      <div class="historial-list" id="historial-list" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- PANEL DERECHO: EDITOR -->
+  <div class="panel panel-right">
+    <div class="editor-actions">
+      <button class="btn btn-ai" onclick="reescribir()">✦ Reescribir con IA</button>
+      <button class="btn btn-ampliar" onclick="ampliar()">↗ Ampliar</button>
+      <button class="btn btn-titular" onclick="generarTitulos()">💡 Sugerir títulos</button>
+      <button class="btn btn-copy" onclick="copiar()">⎘ Copiar todo</button>
+      <button class="btn btn-limpiar" onclick="limpiar()">✕ Limpiar</button>
+    </div>
+
+    <div class="editor-scroll">
+      <div>
+        <label class="field-label">Título de la nota</label>
+        <input class="field-input" id="e-titulo" placeholder="Escribí o pegá el título acá..."/>
+      </div>
+      <div>
+        <label class="field-label">Sección / Etiqueta para Blogger</label>
+        <select class="field-input field-select" id="e-seccion">
+          <option value="Local">📍 Local</option>
+          <option value="Policiales">🚔 Policiales</option>
+          <option value="Política">🏛 Política</option>
+          <option value="Economía">💰 Economía</option>
+          <option value="Turismo">🌊 Turismo</option>
+          <option value="Deportes">⚽ Deportes</option>
+          <option value="Cultura">🎨 Cultura</option>
+          <option value="Teatro">🎭 Teatro</option>
+          <option value="Nacional">🇦🇷 Nacional</option>
+          <option value="Mundo">🌎 Mundo</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Texto de la nota (reescrito)</label>
+        <textarea class="field-textarea" id="e-texto" placeholder="El texto reescrito por la IA aparecerá acá. También podés escribir directamente." style="min-height:220px" oninput="contarPalabras()"></textarea>
+        <div class="word-count" id="wc-nota">0 palabras</div>
+      </div>
+      <div>
+        <label class="field-label">Títulos alternativos sugeridos</label>
+        <textarea class="field-textarea" id="e-titulos" placeholder="Los títulos alternativos aparecerán acá..." style="min-height:80px;opacity:0.8" readonly></textarea>
+      </div>
+    </div>
+
+    <div class="status-bar" id="status-bar">
+      <span class="status-dot" style="background:var(--border)"></span>
+      Listo. Pegá una noticia a la izquierda para empezar.
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">¡Copiado! Pegalo en Blogger → Nueva entrada</div>
+
+<script>
+// Reloj
+setInterval(()=>{
+  const n = new Date()
+  document.getElementById('reloj').textContent = n.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase() + ' ' + n.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'})
+},1000)
+
+// Historial
+let historial = JSON.parse(localStorage.getItem('mdp_historial')||'[]')
+
+function abrirLink() {
+  const link = document.getElementById('link-input').value.trim()
+  if(!link){setStatus('Pegá el link de la noticia primero.','err');return}
+  if(!link.startsWith('http')){setStatus('El link debe empezar con http:// o https://','err');return}
+  window.open(link,'_blank')
+  // Detectar medio automáticamente
+  try {
+    const url = new URL(link)
+    const host = url.hostname.replace('www.','')
+    const medios = {'0223.com.ar':'0223','lacapitalmdp.com':'La Capital MDP','ahoramardelplata.com.ar':'Ahora MDP','infobrisas.com':'Infobrisas','puntonoticias.com':'Punto Noticias','mardelplataweb.com':'MDP Web','elmarplatense.com':'El Marplatense','infobae.com':'Infobae','clarin.com':'Clarín','lanacion.com.ar':'La Nación','tn.com.ar':'TN','pagina12.com.ar':'Página 12','ambito.com':'Ámbito','bbc.com':'BBC Mundo','cnn.com':'CNN','elpais.com':'El País'}
+    const medio = Object.entries(medios).find(([k])=>host.includes(k))
+    if(medio) document.getElementById('fuente-input').value = medio[1]
+  } catch(e){}
+  setStatus('Noticia abierta en nueva pestaña. Copiá el texto completo y pegalo abajo.','ok')
+}
+
+function actualizarDesdeOriginal() {
+  const txt = document.getElementById('texto-original').value
+  const palabras = txt.trim() ? txt.trim().split(/\s+/).length : 0
+  document.getElementById('wc-original').textContent = palabras + ' palabras copiadas'
+  // Auto-detectar título (primera línea)
+  if(txt.trim() && !document.getElementById('e-titulo').value) {
+    const primeraLinea = txt.trim().split('\n')[0].trim()
+    if(primeraLinea.length > 10 && primeraLinea.length < 200) {
+      document.getElementById('e-titulo').value = primeraLinea
+    }
+  }
+}
+
+function contarPalabras() {
+  const txt = document.getElementById('e-texto').value.trim()
+  const p = txt ? txt.split(/\s+/).length : 0
+  document.getElementById('wc-nota').textContent = p + ' palabras ' + (p < 100 ? '— recomendado mínimo 150' : '✓')
+}
+
+function getApiKey() {
+  return localStorage.getItem('mdp_api_key') || ''
+}
+
+function guardarApiKey() {
+  const key = document.getElementById('api-key-input').value.trim()
+  if(!key.startsWith('sk-ant-')) {
+    document.getElementById('api-error').style.display = 'block'
+    return
+  }
+  localStorage.setItem('mdp_api_key', key)
+  document.getElementById('modal-api').style.display = 'none'
+}
+
+async function llamarIA(prompt) {
+  const apiKey = getApiKey()
+  if(!apiKey) {
+    document.getElementById('modal-api').style.display = 'flex'
+    throw new Error('Sin clave API')
+  }
+  const r = await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+  })
+  const d = await r.json()
+  if(d.error) {
+    if(d.error.type === 'authentication_error') {
+      localStorage.removeItem('mdp_api_key')
+      document.getElementById('modal-api').style.display = 'flex'
+      throw new Error('Clave inválida')
+    }
+    throw new Error(d.error.message)
+  }
+  return d.content?.map(c=>c.text||'').join('')||''
+}
+
+async function reescribir() {
+  const titulo = document.getElementById('e-titulo').value
+  const original = document.getElementById('texto-original').value
+  const texto = original || document.getElementById('e-texto').value
+  if(!texto.trim()){setStatus('Pegá el texto de la noticia original primero.','err');return}
+  setStatus('✦ Reescribiendo con IA — esperá unos segundos...','loading')
+  try {
+    const res = await llamarIA(`Sos el redactor del portal "Actualidad MDP" de Mar del Plata, Argentina.
+Reescribí completamente esta noticia con tus propias palabras. 
+Requisitos:
+- Tono periodístico, claro y directo
+- NO copies ni una frase del original
+- Mínimo 4 párrafos, mínimo 180 palabras
+- Si es noticia nacional o internacional, mencioná cómo puede impactar en Mar del Plata
+- Empezá con el dato más importante (estilo pirámide invertida)
+
+TÍTULO: ${titulo||'(sin título)'}
+TEXTO ORIGINAL COMPLETO:
+${texto}
+
+Respondé SOLO con el texto de la nota. Sin título, sin aclaraciones, sin comillas al inicio o final.`)
+    if(res){
+      document.getElementById('e-texto').value=res
+      contarPalabras()
+      guardarHistorial()
+      setStatus('✓ Nota reescrita. Revisala y editala si querés, luego copiala para Blogger.','ok')
+    } else setStatus('Problema con la IA. Intentá de nuevo.','err')
+  } catch(e){setStatus('Sin conexión a la IA. Verificá tu internet.','err')}
+}
+
+async function ampliar() {
+  const titulo = document.getElementById('e-titulo').value
+  const texto = document.getElementById('e-texto').value || document.getElementById('texto-original').value
+  if(!texto.trim()){setStatus('Primero reescribí la nota.','err');return}
+  setStatus('↗ Ampliando la nota...','loading')
+  try {
+    const res = await llamarIA(`Sos redactor de "Actualidad MDP", portal de Mar del Plata.
+Ampliá esta nota con más contexto, antecedentes y datos relevantes.
+Agregá 2 o 3 párrafos nuevos. Total final: mínimo 250 palabras.
+Mencioná cómo impacta en los vecinos de Mar del Plata si es relevante.
+
+TÍTULO: ${titulo}
+TEXTO ACTUAL: ${texto}
+
+Respondé SOLO con el texto completo y ampliado. Sin título.`)
+    if(res){document.getElementById('e-texto').value=res;contarPalabras();setStatus('✓ Nota ampliada.','ok')}
+    else setStatus('Problema con la IA.','err')
+  } catch(e){setStatus('Sin conexión a la IA.','err')}
+}
+
+async function generarTitulos() {
+  const titulo = document.getElementById('e-titulo').value
+  const texto = document.getElementById('e-texto').value || document.getElementById('texto-original').value
+  if(!texto.trim()&&!titulo){setStatus('Primero cargá una noticia.','err');return}
+  setStatus('💡 Generando títulos alternativos...','loading')
+  try {
+    const res = await llamarIA(`Generá 5 títulos alternativos para esta noticia del portal "Actualidad MDP" de Mar del Plata.
+Criterios: directos, sin clickbait, periodísticos, máximo 12 palabras, en español rioplatense.
+Numeralos del 1 al 5.
+
+TÍTULO ACTUAL: ${titulo||'(sin título)'}
+TEXTO: ${texto.substring(0,500)}
+
+Respondé SOLO con los 5 títulos numerados.`)
+    if(res){document.getElementById('e-titulos').value=res;setStatus('✓ Títulos generados. Hacé clic en uno para copiarlo.','ok')}
+    else setStatus('Problema con la IA.','err')
+  } catch(e){setStatus('Sin conexión a la IA.','err')}
+}
+
+function copiar() {
+  const titulo = document.getElementById('e-titulo').value
+  const texto = document.getElementById('e-texto').value
+  const seccion = document.getElementById('e-seccion').value
+  const fuente = document.getElementById('fuente-input').value
+  if(!titulo&&!texto){setStatus('No hay nada para copiar.','err');return}
+  const contenido = `TÍTULO:\n${titulo}\n\nSECCIÓN / ETIQUETA: ${seccion}\n\nTEXTO:\n${texto}\n\n---\nFuente: ${fuente||'—'}`
+  navigator.clipboard.writeText(contenido).then(()=>{
+    const t=document.getElementById('toast');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)
+    setStatus('✓ Copiado. Andá a Blogger → Nueva entrada → Ctrl+V → Publicar.','ok')
+  })
+}
+
+function limpiar() {
+  document.getElementById('link-input').value=''
+  document.getElementById('texto-original').value=''
+  document.getElementById('fuente-input').value=''
+  document.getElementById('e-titulo').value=''
+  document.getElementById('e-texto').value=''
+  document.getElementById('e-titulos').value=''
+  document.getElementById('e-seccion').value='Local'
+  document.getElementById('wc-original').textContent='0 palabras'
+  document.getElementById('wc-nota').textContent='0 palabras'
+  setStatus('Listo para una nueva noticia.','')
+}
+
+function guardarHistorial() {
+  const titulo = document.getElementById('e-titulo').value
+  const texto = document.getElementById('e-texto').value
+  if(!titulo) return
+  const item = {titulo, texto, seccion:document.getElementById('e-seccion').value, fecha:new Date().toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}
+  historial.unshift(item)
+  historial = historial.slice(0,10)
+  localStorage.setItem('mdp_historial', JSON.stringify(historial))
+  renderHistorial()
+}
+
+function renderHistorial() {
+  const el = document.getElementById('historial-list')
+  if(!historial.length){el.innerHTML='<div style="font-size:11px;color:var(--muted);padding:4px 0">Sin notas guardadas aún.</div>';return}
+  el.innerHTML = historial.map((h,i)=>`
+    <div class="hist-item" onclick="cargarDesdeHistorial(${i})">
+      <span>${h.titulo}</span>
+      <small>${h.fecha}</small>
+    </div>`).join('')
+}
+
+function cargarDesdeHistorial(i) {
+  const h = historial[i]
+  document.getElementById('e-titulo').value = h.titulo
+  document.getElementById('e-texto').value = h.texto
+  document.getElementById('e-seccion').value = h.seccion
+  contarPalabras()
+  setStatus('Nota cargada del historial.','ok')
+}
+
+function toggleHistorial() {
+  const list = document.getElementById('historial-list')
+  const arrow = document.getElementById('hist-arrow')
+  if(list.style.display==='none'){list.style.display='block';arrow.textContent='▾';renderHistorial()}
+  else{list.style.display='none';arrow.textContent='▸'}
+}
+
+function setStatus(msg,tipo) {
+  const el = document.getElementById('status-bar')
+  el.innerHTML=''
+  const dot=document.createElement('span')
+  dot.className='status-dot'+(tipo==='loading'?' pulsing':'')
+  el.appendChild(dot)
+  el.appendChild(document.createTextNode(' '+msg))
+  el.className='status-bar'+(tipo?' '+tipo:'')
+}
+
+// Enter en link input
+document.getElementById('link-input').addEventListener('keydown',e=>{if(e.key==='Enter')abrirLink()})
+
+// Iniciar
+renderHistorial()
+// Verificar si ya tiene clave guardada
+if(localStorage.getItem('mdp_api_key')) {
+  document.getElementById('modal-api').style.display = 'none'
+}
+// Agregar botón para cambiar clave
+document.querySelector('.header').insertAdjacentHTML('beforeend', '<button onclick="document.getElementById('modal-api').style.display='flex'" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:4px 10px;font-size:10px;cursor:pointer;margin-left:8px">🔑 API</button>')
+</script>
+</body>
+</html>
