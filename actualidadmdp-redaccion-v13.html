@@ -547,8 +547,7 @@ CONCEPTO: [tu concepto satírico en español en 2-3 oraciones]
 PROMPT: [el prompt técnico en inglés, detallado, listo para usar]`)
 
     // Parse response
-    const lines = promptGeneration.split('
-').filter(l => l.trim())
+    const lines = promptGeneration.split('\n').filter(l => l.trim())
     let concepto = ''
     let imagePrompt = ''
     
