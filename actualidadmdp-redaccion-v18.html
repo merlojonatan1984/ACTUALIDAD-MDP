@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Redacción — Actualidad MDP</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--navy:#0b1f2e;--sea:#0e3d5c;--accent:#00aaff;--red:#d42b2b;--green:#1a8f4a;--purple:#7c3aed;--white:#fff;--bg:#f0f2f5;--text:#0f1923;--muted:#5a6472;--border:#dde2e8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.header{background:var(--navy);padding:9px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff;letter-spacing:3px}
+.logo span{color:var(--accent)}
+.badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:3px 8px;border-radius:2px;letter-spacing:1px}
+.header-right{display:flex;align-items:center;gap:8px}
+.btn-apikey{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.6);border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:4px 10px;font-size:10px;cursor:pointer}
+.reloj{font-size:10px;color:rgba(255,255,255,0.35)}
+.medios-bar{background:var(--sea);padding:6px 12px;display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;align-items:center;flex-shrink:0}
+.medios-bar::-webkit-scrollbar{display:none}
+.ml{font-size:9px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;white-space:nowrap;margin-right:4px}
+.mb{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.75);border:1px solid rgba(255,255,255,0.12);border-radius:4px;padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s}
+.mb:hover,.mb.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.mb.nac{color:#fcd34d;border-color:#fbbf2430}
+.mb.nac:hover,.mb.nac.on{background:#f59e0b;color:#fff;border-color:#f59e0b}
+.mb.inter{color:#6ee7b7;border-color:#6ee7b730}
+.mb.inter:hover,.mb.inter.on{background:#059669;color:#fff;border-color:#059669}
+.sep{color:rgba(255,255,255,0.15);margin:0 3px}
+.toolbar{background:var(--white);padding:7px 12px;border-bottom:1px solid var(--border);display:flex;gap:7px;align-items:center;flex-shrink:0}
+.search{flex:1;border:1.5px solid var(--border);border-radius:5px;padding:6px 10px;font-size:12px;font-family:'Source Sans 3',sans-serif;outline:none}
+.search:focus{border-color:var(--accent)}
+.cat-sel{border:1.5px solid var(--border);border-radius:5px;padding:6px 10px;font-size:11px;font-family:'Source Sans 3',sans-serif;outline:none;background:var(--white);cursor:pointer}
+.btn-upd{background:var(--accent);color:#fff;border:none;border-radius:5px;padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.btn-upd:hover{background:#0088cc}
+.n-count{font-size:10px;color:var(--muted);margin-left:4px;font-weight:600}
+.layout{display:grid;grid-template-columns:1fr 400px;flex:1;overflow:hidden;min-height:0}
+.left{overflow-y:auto;padding:10px;background:var(--bg)}
+.skel{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200%;animation:sh 1.2s infinite;border-radius:3px}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.ncard{background:var(--white);border:1px solid var(--border);border-radius:7px;margin-bottom:8px;padding:12px;cursor:pointer;transition:all .15s}
+.ncard:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(0,170,255,0.08)}
+.ncard.sel{border-color:var(--accent);border-width:2px;background:#f0f8ff}
+.nc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;gap:8px}
+.nc-fuente{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap}
+.floc{background:#dbeafe;color:#1e3a5f}
+.fnac{background:#fef3c7;color:#78350f}
+.fint{background:#dcfce7;color:#14532d}
+.nc-time{font-size:9px;color:var(--muted);white-space:nowrap}
+.nc-titulo{font-size:13px;font-weight:700;color:var(--navy);line-height:1.4;margin-bottom:4px}
+.nc-desc{font-size:11px;color:var(--muted);line-height:1.55;margin-bottom:8px}
+.nc-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.nc-cat{font-size:9px;color:var(--muted);font-weight:600}
+.nc-btns{display:flex;gap:5px}
+.btn-leer{background:var(--bg);color:var(--sea);border:1px solid var(--border);border-radius:3px;padding:4px 9px;font-size:10px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-usar{background:var(--navy);color:#fff;border:none;border-radius:3px;padding:4px 12px;font-size:10px;font-weight:700;cursor:pointer}
+.btn-usar:hover{background:var(--accent)}
+.right{background:#fafbfc;border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rh{padding:10px 14px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0}
+.rh-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--navy);margin-bottom:7px}
+.rh-btns{display:flex;gap:5px;flex-wrap:wrap}
+.btn{border:none;border-radius:4px;padding:6px 12px;font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:all .15s}
+.btn-ai{background:var(--navy);color:#fff}
+.btn-ai:hover{background:var(--sea)}
+.btn-tit{background:#f59e0b;color:#fff}
+.btn-tit:hover{background:#d97706}
+.btn-cp{background:var(--green);color:#fff}
+.btn-cp:hover{background:#146b38}
+.btn-img{background:var(--purple);color:#fff}
+.btn-img:hover{background:#6d28d9}
+.btn-cl{background:var(--border);color:var(--muted)}
+.rbody{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.fl{display:flex;flex-direction:column;gap:3px}
+.fl label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.fi{border:1.5px solid var(--border);border-radius:5px;padding:8px 10px;font-size:12px;font-family:'Source Sans 3',sans-serif;color:var(--text);outline:none;background:var(--white);transition:border .15s;width:100%}
+.fi:focus{border-color:var(--accent)}
+.fta{resize:none;line-height:1.75;min-height:180px}
+.fta-sm{resize:none;min-height:70px;opacity:0.8}
+.fsel{appearance:none;background:var(--white) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath d='M1 3l4 4 4-4' stroke='%23666' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;padding-right:28px;cursor:pointer}
+.wc{font-size:10px;color:var(--muted);text-align:right;margin-top:2px}
+.img-box{background:#f5f3ff;border:1px solid #ddd6fe;border-radius:6px;padding:10px;display:none}
+.img-status{font-size:11px;color:var(--purple);margin-bottom:8px;font-weight:600}
+.img-concepto{font-size:11px;color:#5b21b6;line-height:1.6;margin-bottom:8px;padding:8px;background:#ede9fe;border-radius:4px;display:none}
+.img-result{width:100%;border-radius:4px;border:1px solid var(--border);display:none}
+.btn-dl{width:100%;margin-top:8px;background:var(--purple);color:#fff;border:none;border-radius:4px;padding:8px;font-size:11px;font-weight:700;cursor:pointer;display:none}
+.rfoot{padding:7px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);background:var(--white);flex-shrink:0;display:flex;align-items:center;gap:5px;min-height:32px}
+.rfoot.ok{color:var(--green)}
+.rfoot.loading{color:var(--accent)}
+.rfoot.err{color:var(--red)}
+.rdot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.pulse{animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:10px 18px;border-radius:6px;font-size:12px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9998}
+.toast.show{opacity:1}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center}
+.modal-box{background:#fff;border-radius:12px;padding:28px 30px;max-width:420px;width:90%}
+.modal-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--navy);letter-spacing:2px;margin-bottom:4px}
+.modal-logo span{color:var(--accent)}
+.modal-sub{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:18px}
+.modal-title{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.modal-desc{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:14px}
+.modal-input{width:100%;border:2px solid var(--border);border-radius:6px;padding:10px 12px;font-size:13px;font-family:'Source Sans 3',sans-serif;outline:none;margin-bottom:8px}
+.modal-input:focus{border-color:var(--accent)}
+.modal-hint{font-size:10px;color:var(--muted);margin-bottom:16px;line-height:1.6}
+.modal-hint a{color:var(--accent)}
+.modal-btn{width:100%;background:var(--navy);color:#fff;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:700;cursor:pointer}
+.modal-btn:hover{background:var(--sea)}
+.modal-err{color:var(--red);font-size:11px;margin-top:8px;display:none}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.empty-icon{font-size:36px;opacity:0.3;margin-bottom:10px}
+.empty-t{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.empty-s{font-size:12px;line-height:1.7}
+</style>
+</head>
+<body>
+
+<div class="modal" id="modal-api">
+  <div class="modal-box">
+    <div class="modal-logo">ACTUALIDAD <span>MDP</span></div>
+    <div class="modal-sub">Panel de Redacción</div>
+    <div class="modal-title">Ingresá tu clave API de Anthropic</div>
+    <div class="modal-desc">Las claves se guardan solo en tu navegador. Nadie más puede verlas.</div>
+    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px">CLAVE ANTHROPIC (para redactar)</label>
+    <input class="modal-input" id="api-inp" type="password" placeholder="sk-ant-api03-..."/>
+    <div class="modal-hint">Obtené tu clave en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
+    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">CLAVE GEMINI (para generar imágenes)</label>
+    <input class="modal-input" id="gemini-inp" type="password" placeholder="AIza..."/>
+    <div class="modal-hint">Obtené tu clave en <a href="https://aistudio.google.com" target="_blank">aistudio.google.com</a> → Get API Key</div>
+    <button class="modal-btn" id="btn-entrar" onclick="guardarKey()">Entrar al panel →</button>
+    <div class="modal-err" id="api-err">Verificá las claves ingresadas.</div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="logo">ACTUALIDAD <span>MDP</span> <span style="font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:400;color:rgba(255,255,255,0.3);letter-spacing:0"> · Redacción</span></div>
+  <div class="header-right">
+    <span class="reloj" id="reloj"></span>
+    <button class="btn-apikey" onclick="showModal()">🔑 API</button>
+    <span class="badge">PRIVADO</span>
+  </div>
+</div>
+
+<div class="medios-bar">
+  <span class="ml">Medios:</span>
+  <span class="mb on" onclick="setMedio('todos',this)">⭐ Todos</span>
+  <span class="mb" onclick="setMedio('ahoramdp',this)">Ahora MDP</span>
+  <span class="mb" onclick="setMedio('puntonoticias',this)">Punto Noticias</span>
+  <span class="sep">|</span>
+  <span class="mb nac" onclick="setMedio('clarin',this)">Clarín</span>
+  <span class="mb nac" onclick="setMedio('lanacion',this)">La Nación</span>
+  <span class="sep">|</span>
+  <span class="mb inter" onclick="setMedio('bbc',this)">BBC</span>
+  <span class="mb inter" onclick="setMedio('elpais',this)">El País</span>
+</div>
+
+<div class="toolbar">
+  <input class="search" id="search-inp" placeholder="Buscar en las noticias..." type="text" oninput="filtrar()"/>
+  <select class="cat-sel" id="cat-sel" onchange="filtrar()">
+    <option value="">Todas las categorías</option>
+    <option value="local">📍 Local MDP</option>
+    <option value="policiales">🚔 Policiales</option>
+    <option value="deportes">⚽ Deportes</option>
+    <option value="turismo">🌊 Turismo</option>
+    <option value="cultura">🎭 Cultura y Teatro</option>
+    <option value="economia">💰 Economía</option>
+    <option value="politica">🏛 Política</option>
+    <option value="nacional">🇦🇷 Nacional</option>
+    <option value="mundo">🌎 Mundo</option>
+  </select>
+  <button class="btn-upd" id="btn-upd" onclick="cargar()">
+    <span id="spin-icon">↻</span> Actualizar
+  </button>
+  <span class="n-count" id="n-count"></span>
+</div>
+
+<div class="layout">
+  <div class="left" id="left-panel">
+    <div class="empty">
+      <div class="empty-icon">📰</div>
+      <div class="empty-t">Tu redacción en tiempo real</div>
+      <div class="empty-s">Seleccioná un medio y hacé clic en <strong>Actualizar</strong>.</div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="rh">
+      <div class="rh-title">✏ Editor</div>
+      <div class="rh-btns">
+        <button class="btn btn-ai" onclick="generarConIA()">✦ Generar con IA</button>
+        <button class="btn btn-tit" onclick="sugerirTitulos()">💡 Títulos</button>
+        <button class="btn btn-img" onclick="generarCaricatura()">🎨 Imagen</button>
+        <button class="btn btn-cp" onclick="copiar()">⎘ Copiar</button>
+        <button class="btn btn-cl" onclick="limpiar()">✕</button>
+      </div>
+    </div>
+    <div class="rbody">
+      <div class="fl">
+        <label>Título</label>
+        <input class="fi" id="e-titulo" placeholder="El título aparecerá acá..." type="text"/>
+      </div>
+      <div class="fl">
+        <label>Sección</label>
+        <select class="fi fsel" id="e-sec">
+          <option value="Local">📍 Local</option>
+          <option value="Policiales">🚔 Policiales</option>
+          <option value="Política">🏛 Política</option>
+          <option value="Economía">💰 Economía</option>
+          <option value="Turismo">🌊 Turismo</option>
+          <option value="Deportes">⚽ Deportes</option>
+          <option value="Cultura">🎨 Cultura</option>
+          <option value="Teatro">🎭 Teatro</option>
+          <option value="Nacional">🇦🇷 Nacional</option>
+          <option value="Mundo">🌎 Mundo</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Texto de la nota</label>
+        <textarea class="fi fta" id="e-texto" placeholder="Seleccioná una noticia y presioná Generar con IA..." oninput="wc()"></textarea>
+        <div class="wc" id="wc">0 palabras</div>
+      </div>
+      <div class="fl">
+        <label>Títulos alternativos</label>
+        <textarea class="fi fta-sm" id="e-tits" placeholder="Los títulos sugeridos aparecerán acá..." readonly></textarea>
+      </div>
+      <div class="img-box" id="img-box">
+        <div class="img-status" id="img-status">Generando caricatura...</div>
+        <div class="img-concepto" id="img-concepto"></div>
+        <img class="img-result" id="img-result" alt="Caricatura"/>
+        <button class="btn-dl" id="btn-dl" onclick="descargarImg()">⬇ Descargar imagen para Blogger</button>
+      </div>
+    </div>
+    <div class="rfoot" id="rfoot">
+      <span class="rdot" style="background:var(--border)"></span>
+      Seleccioná una noticia para empezar.
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">¡Copiado! Pegalo en Blogger</div>
+
+<script>
+var MEDIOS = {
+  'ahoramdp':    {n:'Ahora MDP',      t:'local',   url:'https://ahoramardelplata.com.ar', rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://ahoramardelplata.com.ar/feed/'},
+  'puntonoticias':{n:'Punto Noticias', t:'local',   url:'https://puntonoticias.com',       rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://puntonoticias.com/feed/'},
+  'clarin':      {n:'Clarin',         t:'nacional', url:'https://www.clarin.com',          rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.clarin.com/rss/'},
+  'lanacion':    {n:'La Nacion',      t:'nacional', url:'https://www.lanacion.com.ar',     rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.lanacion.com.ar/arc/outboundfeeds/rss/'},
+  'bbc':         {n:'BBC Mundo',      t:'inter',    url:'https://www.bbc.com/mundo',       rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.bbci.co.uk/mundo/rss.xml'},
+  'elpais':      {n:'El Pais',        t:'inter',    url:'https://elpais.com',              rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada'}
+};
+
+var medioActual = 'todos';
+var todasNoticias = [];
+var noticiaActual = null;
+
+setInterval(function() {
+  var n = new Date();
+  var el = document.getElementById('reloj');
+  if(el) el.textContent = n.toLocaleDateString('es-AR',{weekday:'short',day:'numeric',month:'short'}).toUpperCase() + ' ' + n.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+}, 1000);
+
+function getKey() { return localStorage.getItem('mdp_key') || ''; }
+
+function guardarKey() {
+  var k = document.getElementById('api-inp').value.trim();
+  var g = document.getElementById('gemini-inp').value.trim();
+  if(!k.startsWith('sk-ant-')) {
+    document.getElementById('api-err').style.display = 'block';
+    document.getElementById('api-err').textContent = 'La clave de Anthropic debe empezar con sk-ant-';
+    return;
+  }
+  localStorage.setItem('mdp_key', k);
+  if(g) localStorage.setItem('gemini_key', g);
+  document.getElementById('modal-api').style.display = 'none';
+}
+
+function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
+
+function showModal() { document.getElementById('modal-api').style.display = 'flex'; }
+
+if(getKey()) document.getElementById('modal-api').style.display = 'none';
+
+document.getElementById('api-inp').addEventListener('keydown', function(e) {
+  if(e.key === 'Enter') guardarKey();
+});
+
+function setMedio(m, el) {
+  medioActual = m;
+  document.querySelectorAll('.mb').forEach(function(b) { b.classList.remove('on'); });
+  el.classList.add('on');
+}
+
+function cargar() {
+  var btn = document.getElementById('btn-upd');
+  var icon = document.getElementById('spin-icon');
+  btn.disabled = true;
+  icon.style.animation = 'sh 1s linear infinite';
+
+  var skels = '';
+  for(var i=0;i<5;i++) {
+    skels += '<div style="background:#fff;border:1px solid #dde2e8;border-radius:7px;margin-bottom:8px;padding:12px">' +
+      '<div class="skel" style="width:35%;height:9px;margin-bottom:8px"></div>' +
+      '<div class="skel" style="width:88%;height:12px;margin-bottom:5px"></div>' +
+      '<div class="skel" style="width:65%;height:10px"></div>' +
+      '</div>';
+  }
+  document.getElementById('left-panel').innerHTML = '<div style="padding:4px">' + skels + '</div>';
+
+  var mediosACargar = medioActual === 'todos' ? Object.keys(MEDIOS) : [medioActual];
+  todasNoticias = [];
+  var pendiente = mediosACargar.length;
+
+  mediosACargar.forEach(function(id) {
+    var m = MEDIOS[id];
+    fetch(m.rss).then(function(r) { return r.text(); }).then(function(text) {
+      var parser = new DOMParser();
+      var xml = parser.parseFromString(text, 'text/xml');
+      var items = xml.querySelectorAll('item');
+      items.forEach(function(item, idx) {
+        if(idx >= 8) return;
+        var titulo = (item.querySelector('title') ? item.querySelector('title').textContent.trim() : '') || 'Sin titulo';
+        var linkEl = item.querySelector('link');
+        var link = (linkEl ? linkEl.textContent.trim() : '') || m.url;
+        var descEl = item.querySelector('description');
+        var desc = descEl ? descEl.textContent : '';
+        var pubDate = item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '';
+        var tmp = document.createElement('div');
+        tmp.innerHTML = desc;
+        var descText = tmp.textContent.trim().substring(0, 220);
+        todasNoticias.push({
+          titulo: titulo,
+          desc: descText || 'Sin descripcion disponible.',
+          url: link,
+          medio: m.n,
+          tipo: m.t,
+          fecha: pubDate ? new Date(pubDate) : new Date(),
+          cat: detectarCat(titulo)
+        });
+      });
+    }).catch(function(e) {
+      console.log('Error cargando ' + id, e);
+    }).finally(function() {
+      pendiente--;
+      if(pendiente === 0) {
+        todasNoticias.sort(function(a,b) { return b.fecha - a.fecha; });
+        btn.disabled = false;
+        icon.style.animation = '';
+        mostrar(todasNoticias);
+        setStatus('✓ ' + todasNoticias.length + ' noticias cargadas — ' + new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'}), 'ok');
+      }
+    });
+  });
+}
+
+function detectarCat(titulo) {
+  var t = titulo.toLowerCase();
+  if(t.includes('policial')||t.includes('robo')||t.includes('detenido')||t.includes('crimen')||t.includes('asesina')) return 'policiales';
+  if(t.includes('alvarado')||t.includes('aldosivi')||t.includes('futbol')||t.includes('deporte')||t.includes('gol')) return 'deportes';
+  if(t.includes('turismo')||t.includes('playa')||t.includes('hotel')||t.includes('temporada')) return 'turismo';
+  if(t.includes('teatro')||t.includes('obra')||t.includes('festival')||t.includes('cultura')||t.includes('arte')) return 'cultura';
+  if(t.includes('dolar')||t.includes('inflacion')||t.includes('precio')||t.includes('tarifas')) return 'economia';
+  if(t.includes('politica')||t.includes('eleccion')||t.includes('gobierno')||t.includes('milei')) return 'politica';
+  return 'local';
+}
+
+function tiempoRelativo(fecha) {
+  var diff = (new Date() - fecha) / 1000 / 60;
+  if(diff < 60) return 'Hace ' + Math.round(diff) + ' min';
+  if(diff < 1440) return 'Hace ' + Math.round(diff/60) + 'h';
+  return fecha.toLocaleDateString('es-AR',{day:'numeric',month:'short'});
+}
+
+function filtrar() {
+  var txt = document.getElementById('search-inp').value.toLowerCase();
+  var cat = document.getElementById('cat-sel').value;
+  var f = todasNoticias;
+  if(txt) f = f.filter(function(n) { return n.titulo.toLowerCase().includes(txt) || n.desc.toLowerCase().includes(txt); });
+  if(cat) f = f.filter(function(n) { return n.cat === cat; });
+  mostrar(f);
+}
+
+function mostrar(noticias) {
+  document.getElementById('n-count').textContent = noticias.length + ' noticias';
+  if(!noticias.length) {
+    document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div class="empty-t">Sin resultados</div><div class="empty-s">Probá cambiando el filtro.</div></div>';
+    return;
+  }
+  var html = '';
+  noticias.forEach(function(n, i) {
+    html += '<div class="ncard" id="nc' + i + '" onclick="seleccionar(' + i + ')">' +
+      '<div class="nc-top"><span class="nc-fuente f' + n.tipo + '">' + n.medio + '</span><span class="nc-time">' + tiempoRelativo(n.fecha) + '</span></div>' +
+      '<div class="nc-titulo">' + n.titulo + '</div>' +
+      '<div class="nc-desc">' + n.desc + '</div>' +
+      '<div class="nc-footer"><span class="nc-cat">📂 ' + n.cat.charAt(0).toUpperCase() + n.cat.slice(1) + '</span>' +
+      '<div class="nc-btns"><a class="btn-leer" href="' + n.url + '" target="_blank" onclick="event.stopPropagation()">🔗 Leer</a>' +
+      '<button class="btn-usar" onclick="event.stopPropagation();seleccionar(' + i + ')">Usar →</button></div></div>' +
+      '</div>';
+  });
+  document.getElementById('left-panel').innerHTML = html;
+  window._noticias = noticias;
+}
+
+function seleccionar(i) {
+  document.querySelectorAll('.ncard').forEach(function(c) { c.classList.remove('sel'); });
+  var el = document.getElementById('nc' + i);
+  if(el) el.classList.add('sel');
+  noticiaActual = window._noticias[i];
+  document.getElementById('e-titulo').value = noticiaActual.titulo;
+  document.getElementById('e-sec').value = noticiaActual.cat.charAt(0).toUpperCase() + noticiaActual.cat.slice(1);
+  document.getElementById('e-texto').value = '';
+  document.getElementById('e-tits').value = '';
+  document.getElementById('img-box').style.display = 'none';
+  wc();
+  setStatus('Noticia cargada. Presiona Generar con IA.', '');
+}
+
+function llamarIA(prompt) {
+  var k = getKey();
+  if(!k) { showModal(); return Promise.reject(new Error('Sin clave')); }
+  return fetch('https://rss-mdp.merlojonatan1984.workers.dev/ai', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
+    body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if(d.error) {
+      if(d.error.type === 'authentication_error') { localStorage.removeItem('mdp_key'); showModal(); }
+      throw new Error(d.error.message);
+    }
+    return (d.content || []).map(function(c) { return c.text || ''; }).join('');
+  });
+}
+
+function generarConIA() {
+  if(!noticiaActual) { setStatus('Selecciona una noticia primero.', 'err'); return; }
+  setStatus('Generando nota con IA...', 'loading');
+  var tipo = noticiaActual.tipo;
+  var contexto = '';
+  if(tipo === 'local') {
+    contexto = 'Es una noticia LOCAL de Mar del Plata. Escribila con enfoque 100% local, mencionando barrios, instituciones y vecinos de la ciudad.';
+  } else if(tipo === 'nacional') {
+    contexto = 'Es una noticia NACIONAL de Argentina. Escribila con enfoque argentino, sin forzar menciones a Mar del Plata.';
+  } else {
+    contexto = 'Es una noticia INTERNACIONAL. Escribila con enfoque global y neutral.';
+  }
+  llamarIA('Sos el redactor del portal "Actualidad MDP" de Mar del Plata, Argentina.\n\n' + contexto + '\n\nReescribi esta noticia completamente con tus propias palabras. Requisitos:\n- Tono periodistico claro y directo\n- 4 parrafos bien desarrollados\n- Minimo 180 palabras\n- Datos concretos: numeros, nombres, fechas\n- Primer parrafo con el dato mas importante\n- Sin relleno ni frases genericas\n\nTITULO: ' + noticiaActual.titulo + '\nRESUMEN: ' + noticiaActual.desc + '\nFUENTE: ' + noticiaActual.medio + '\n\nResponde SOLO con el texto. Sin titulo, sin aclaraciones.').then(function(res) {
+    if(res) {
+      document.getElementById('e-texto').value = res;
+      wc();
+      setStatus('Nota generada. Revisa y publica en Blogger.', 'ok');
+    }
+  }).catch(function(e) { setStatus('Error: ' + e.message, 'err'); });
+}
+
+function sugerirTitulos() {
+  if(!noticiaActual) { setStatus('Selecciona una noticia primero.', 'err'); return; }
+  setStatus('Generando titulos...', 'loading');
+  llamarIA('Genera 5 titulos periodisticos para esta noticia del portal "Actualidad MDP". Directos, sin clickbait, maximo 12 palabras. Numeralos 1 al 5.\n\nNOTICIA: ' + noticiaActual.titulo + '\n\nResponde SOLO con los 5 titulos numerados.').then(function(res) {
+    if(res) { document.getElementById('e-tits').value = res; setStatus('Titulos generados.', 'ok'); }
+  }).catch(function(e) { setStatus('Error: ' + e.message, 'err'); });
+}
+
+function generarCaricatura() {
+  var titulo = document.getElementById('e-titulo').value;
+  var texto = document.getElementById('e-texto').value;
+  if(!titulo && !texto) { setStatus('Primero genera el texto de la noticia.', 'err'); return; }
+  
+  var geminiKey = getGeminiKey();
+  if(!geminiKey) {
+    showModal();
+    setStatus('Ingresa tu clave de Gemini para generar imágenes.', 'err');
+    return;
+  }
+
+  var box = document.getElementById('img-box');
+  box.style.display = 'block';
+  document.getElementById('img-status').textContent = 'Analizando la noticia y creando concepto satírico...';
+  document.getElementById('img-concepto').style.display = 'none';
+  document.getElementById('img-result').style.display = 'none';
+  document.getElementById('btn-dl').style.display = 'none';
+  setStatus('Generando caricatura con Gemini...', 'loading');
+
+  var promptIA = 'Sos un Director de Arte experto en caricatura editorial argentina.\n\n' +
+    'Analiza esta noticia y crea:\n' +
+    '1. Un concepto satirico breve en espanol (2-3 oraciones)\n' +
+    '2. Un prompt detallado en ingles para Gemini Image Generation\n\n' +
+    'ESTILO FIJO:\n' +
+    '- Argentine editorial cartoon style, like Quino or Fontanarrosa\n' +
+    '- Bold thick black ink outlines with cross-hatching details\n' +
+    '- Warm beige/cream background, blue sky, orange and gray palette\n' +
+    '- Spanish text integrated in speech bubbles and signs\n' +
+    '- Mar del Plata landmarks in background (casino, lighthouse, beach, buildings)\n' +
+    '- Exaggerated caricature characters, dynamic and expressive\n' +
+    '- Dark border frame around entire image\n' +
+    '- Satirical and humorous tone\n' +
+    '- Horizontal 16:9 format, no watermarks\n\n' +
+    'NOTICIA:\nTitulo: ' + titulo + '\nTexto: ' + texto.substring(0, 600) + '\n\n' +
+    'Responde EXACTAMENTE con este formato:\n' +
+    'CONCEPTO: [concepto satirico en espanol]\n' +
+    'PROMPT: [prompt tecnico en ingles detallado para Gemini]';
+
+  llamarIA(promptIA).then(function(res) {
+    var concepto = '';
+    var imagePrompt = '';
+    var lines = res.split('\n');
+    lines.forEach(function(line) {
+      if(line.startsWith('CONCEPTO:')) concepto = line.replace('CONCEPTO:', '').trim();
+      if(line.startsWith('PROMPT:')) imagePrompt = line.replace('PROMPT:', '').trim();
+    });
+    if(!imagePrompt) imagePrompt = res.trim();
+
+    if(concepto) {
+      var el = document.getElementById('img-concepto');
+      el.textContent = 'Concepto: ' + concepto;
+      el.style.display = 'block';
+    }
+
+    document.getElementById('img-status').textContent = 'Dibujando con Gemini...';
+
+    // Call Gemini Imagen API via Cloudflare Worker
+    fetch('https://rss-mdp.merlojonatan1984.workers.dev/gemini-image', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'x-gemini-key': geminiKey},
+      body: JSON.stringify({prompt: imagePrompt + ', Argentine editorial cartoon style, Quino Fontanarrosa style, thick ink outlines, warm beige background, blue sky, Spanish text in speech bubbles, Mar del Plata landmarks, satirical, dark border frame, 16:9 horizontal, no watermark'})
+    }).then(function(r) { return r.json(); }).then(function(data) {
+      if(data.error) throw new Error(data.error);
+      var img = document.getElementById('img-result');
+      img.src = 'data:image/png;base64,' + data.image;
+      img.style.display = 'block';
+      document.getElementById('img-status').textContent = 'Caricatura lista. Descargala y subila a Blogger.';
+      document.getElementById('btn-dl').style.display = 'block';
+      setStatus('Imagen generada con Gemini. Descargala.', 'ok');
+    }).catch(function(e) {
+      document.getElementById('img-status').textContent = 'Error: ' + e.message;
+      setStatus('Error generando imagen: ' + e.message, 'err');
+    });
+
+  }).catch(function(e) {
+    document.getElementById('img-status').textContent = 'Error: ' + e.message;
+    setStatus('Error: ' + e.message, 'err');
+  });
+}
+
+function descargarImg() {
+  var img = document.getElementById('img-result');
+  if(!img.src) return;
+  var titulo = document.getElementById('e-titulo').value.substring(0, 30).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  var a = document.createElement('a');
+  a.href = img.src;
+  a.download = 'caricatura-' + titulo + '.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+function copiar() {
+  var t = document.getElementById('e-titulo').value;
+  var x = document.getElementById('e-texto').value;
+  var s = document.getElementById('e-sec').value;
+  if(!t && !x) { setStatus('No hay nada para copiar.', 'err'); return; }
+  navigator.clipboard.writeText('TITULO:\n' + t + '\n\nSECCION: ' + s + '\n\nTEXTO:\n' + x).then(function() {
+    var el = document.getElementById('toast');
+    el.classList.add('show');
+    setTimeout(function() { el.classList.remove('show'); }, 2500);
+    setStatus('Copiado. Anda a Blogger y pega con Ctrl+V.', 'ok');
+  });
+}
+
+function limpiar() {
+  document.getElementById('e-titulo').value = '';
+  document.getElementById('e-texto').value = '';
+  document.getElementById('e-tits').value = '';
+  document.getElementById('e-sec').value = 'Local';
+  document.getElementById('wc').textContent = '0 palabras';
+  document.getElementById('img-box').style.display = 'none';
+  noticiaActual = null;
+  document.querySelectorAll('.ncard').forEach(function(c) { c.classList.remove('sel'); });
+  setStatus('Listo para una nueva noticia.', '');
+}
+
+function wc() {
+  var t = document.getElementById('e-texto').value.trim();
+  var p = t ? t.split(/\s+/).length : 0;
+  document.getElementById('wc').textContent = p + ' palabras';
+}
+
+function setStatus(msg, tipo) {
+  var el = document.getElementById('rfoot');
+  el.innerHTML = '';
+  var d = document.createElement('span');
+  d.className = 'rdot' + (tipo === 'loading' ? ' pulse' : '');
+  el.appendChild(d);
+  el.appendChild(document.createTextNode(' ' + msg));
+  el.className = 'rfoot' + (tipo ? ' ' + tipo : '');
+}
+</script>
+</body>
+</html>
