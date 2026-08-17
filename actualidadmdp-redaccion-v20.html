@@ -188,6 +188,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <span class="mb on" onclick="setMedio('todos',this)">⭐ Todos</span>
   <span class="mb" onclick="setMedio('ahoramdp',this)">Ahora MDP</span>
   <span class="mb" onclick="setMedio('puntonoticias',this)">Punto Noticias</span>
+  <span class="mb" onclick="setMedio('elmarplatense',this)">El Marplatense</span>
   <span class="sep">|</span>
   <span class="mb nac" onclick="setMedio('clarin',this)">Clarín</span>
   <span class="mb nac" onclick="setMedio('lanacion',this)">La Nación</span>
@@ -314,7 +315,8 @@ var MEDIOS = {
   'clarin':      {n:'Clarin',         t:'nacional', url:'https://www.clarin.com',          rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.clarin.com/rss/'},
   'lanacion':    {n:'La Nacion',      t:'nacional', url:'https://www.lanacion.com.ar',     rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.lanacion.com.ar/arc/outboundfeeds/rss/'},
   'bbc':         {n:'BBC Mundo',      t:'inter',    url:'https://www.bbc.com/mundo',       rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.bbci.co.uk/mundo/rss.xml'},
-  'elpais':      {n:'El Pais',        t:'inter',    url:'https://elpais.com',              rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada'}
+  'elpais':      {n:'El Pais',        t:'inter',    url:'https://elpais.com',              rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada'},
+  'elmarplatense':{n:'El Marplatense', t:'local',   url:'https://www.elmarplatense.com',   rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://elmarplatenseapiv3.eleco.com.ar/feed-notes'}
 };
 
 var GITHUB_OWNER = 'merlojonatan1984';
@@ -712,15 +714,24 @@ function cargar() {
     fetch(m.rss).then(function(r) { return r.text(); }).then(function(text) {
       var parser = new DOMParser();
       var xml = parser.parseFromString(text, 'text/xml');
-      var items = xml.querySelectorAll('item');
+      var esAtom = xml.querySelectorAll('item').length === 0 && xml.querySelectorAll('entry').length > 0;
+      var items = esAtom ? xml.querySelectorAll('entry') : xml.querySelectorAll('item');
       items.forEach(function(item, idx) {
         if(idx >= 8) return;
         var titulo = (item.querySelector('title') ? item.querySelector('title').textContent.trim() : '') || 'Sin titulo';
-        var linkEl = item.querySelector('link');
-        var link = (linkEl ? linkEl.textContent.trim() : '') || m.url;
-        var descEl = item.querySelector('description');
+        var link;
+        if(esAtom) {
+          var linkEls = item.querySelectorAll('link');
+          var linkAlt = Array.prototype.filter.call(linkEls, function(l) { return !l.getAttribute('rel') || l.getAttribute('rel') === 'alternate'; })[0];
+          link = (linkAlt ? linkAlt.getAttribute('href') : (linkEls[0] ? linkEls[0].getAttribute('href') : '')) || m.url;
+        } else {
+          var linkEl = item.querySelector('link');
+          link = (linkEl ? linkEl.textContent.trim() : '') || m.url;
+        }
+        var descEl = item.querySelector('description') || item.querySelector('summary') || item.querySelector('content');
         var desc = descEl ? descEl.textContent : '';
-        var pubDate = item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '';
+        var fechaEl = item.querySelector('pubDate') || item.querySelector('published') || item.querySelector('updated');
+        var pubDate = fechaEl ? fechaEl.textContent : '';
         var tmp = document.createElement('div');
         tmp.innerHTML = desc;
         var descFull = tmp.textContent.trim().substring(0, 3000);
