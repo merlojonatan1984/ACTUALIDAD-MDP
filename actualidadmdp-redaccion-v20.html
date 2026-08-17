@@ -448,10 +448,11 @@ function cargar() {
         var pubDate = item.querySelector('pubDate') ? item.querySelector('pubDate').textContent : '';
         var tmp = document.createElement('div');
         tmp.innerHTML = desc;
-        var descText = tmp.textContent.trim().substring(0, 220);
+        var descFull = tmp.textContent.trim().substring(0, 3000);
         todasNoticias.push({
           titulo: titulo,
-          desc: descText || 'Sin descripcion disponible.',
+          desc: descFull || 'Sin descripcion disponible.',
+          descCorta: (descFull || 'Sin descripcion disponible.').substring(0, 220),
           url: link,
           medio: m.n,
           tipo: m.t,
@@ -512,7 +513,7 @@ function mostrar(noticias) {
     html += '<div class="ncard" id="nc' + i + '" onclick="seleccionar(' + i + ')">' +
       '<div class="nc-top"><span class="nc-fuente f' + n.tipo + '">' + n.medio + '</span><span class="nc-time">' + tiempoRelativo(n.fecha) + '</span></div>' +
       '<div class="nc-titulo">' + n.titulo + '</div>' +
-      '<div class="nc-desc">' + n.desc + '</div>' +
+      '<div class="nc-desc">' + n.descCorta + '</div>' +
       '<div class="nc-footer"><span class="nc-cat">📂 ' + n.cat.charAt(0).toUpperCase() + n.cat.slice(1) + '</span>' +
       '<div class="nc-btns"><a class="btn-leer" href="' + n.url + '" target="_blank" onclick="event.stopPropagation()">🔗 Leer</a>' +
       '<button class="btn-usar" onclick="event.stopPropagation();seleccionar(' + i + ')">Usar →</button></div></div>' +
@@ -552,7 +553,7 @@ function llamarIA(prompt) {
   return fetch('https://rss-mdp.merlojonatan1984.workers.dev/ai', {
     method: 'POST',
     headers: {'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-    body: JSON.stringify({model:'claude-sonnet-5',max_tokens:800,messages:[{role:'user',content:prompt}]})
+    body: JSON.stringify({model:'claude-sonnet-5',max_tokens:1500,messages:[{role:'user',content:prompt}]})
   }).then(function(r) { return r.json(); }).then(function(d) {
     if(d.error) {
       if(d.error.type === 'authentication_error') { localStorage.removeItem('mdp_key'); showModal(); }
@@ -565,7 +566,7 @@ function llamarIA(prompt) {
 function generarConIA() {
   if(!noticiaActual) { setStatus('Selecciona una noticia primero.', 'err'); return; }
   setStatus('Generando nota con IA...', 'loading');
-  llamarIA('Resume esta noticia de manera periodistica, clara y directa. Solo los hechos mas importantes. Sin agregar contexto, opinion ni impacto local. Solo los hechos.\n\nTITULO: ' + noticiaActual.titulo + '\nNOTICIA: ' + noticiaActual.desc + '\n\nResponde SOLO con el texto. Sin titulo, sin aclaraciones.').then(function(res) {
+  llamarIA('Redacta una nota periodistica completa y bien desarrollada (4 a 6 parrafos) a partir de esta informacion, de manera clara y directa. Usa TODA la informacion provista, desarrollandola en detalle. No agregues opinion, no inventes datos ni cifras que no esten en la informacion original, no agregues impacto local salvo que ya este en la informacion.\n\nTITULO: ' + noticiaActual.titulo + '\nINFORMACION DISPONIBLE: ' + noticiaActual.desc + '\n\nResponde SOLO con el texto de la nota. Sin titulo, sin aclaraciones.').then(function(res) {
     if(res) {
       document.getElementById('e-texto').value = res;
       wc();
