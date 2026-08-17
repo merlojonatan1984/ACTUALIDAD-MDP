@@ -299,7 +299,12 @@ function guardarKey() {
 function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
 function getGithubToken() { return localStorage.getItem('github_token') || ''; }
 
-function showModal() { document.getElementById('modal-api').style.display = 'flex'; }
+function showModal() {
+  document.getElementById('api-inp').value = getKey();
+  document.getElementById('gemini-inp').value = getGeminiKey();
+  document.getElementById('github-inp').value = getGithubToken();
+  document.getElementById('modal-api').style.display = 'flex';
+}
 
 if(getKey()) document.getElementById('modal-api').style.display = 'none';
 
