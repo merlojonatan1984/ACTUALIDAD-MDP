@@ -188,6 +188,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <button class="btn-upd" id="btn-upd" onclick="cargar()">
     <span id="spin-icon">↻</span> Actualizar
   </button>
+  <button class="btn-upd" id="btn-publicadas" onclick="verNotasPublicadas()" style="background:var(--navy)">
+    📂 Notas publicadas
+  </button>
   <span class="n-count" id="n-count"></span>
 </div>
 
@@ -299,6 +302,7 @@ var SECCION_A_CATEGORIA = {
 var medioActual = 'todos';
 var todasNoticias = [];
 var noticiaActual = null;
+var notaEditando = null;
 var imagenManualBase64 = null;
 var imagenesInline = [];
 
@@ -576,6 +580,7 @@ function seleccionar(i) {
   var el = document.getElementById('nc' + i);
   if(el) el.classList.add('sel');
   noticiaActual = window._noticias[i];
+  notaEditando = null;
   document.getElementById('e-titulo').value = noticiaActual.titulo;
   document.getElementById('e-sec').value = noticiaActual.cat.charAt(0).toUpperCase() + noticiaActual.cat.slice(1);
   document.getElementById('e-texto').value = '';
@@ -742,8 +747,10 @@ function utf8ToBase64(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
 
-function githubPutFile(path, base64Content, message) {
+function githubPutFile(path, base64Content, message, sha) {
   var token = getGithubToken();
+  var body = { message: message, content: base64Content };
+  if(sha) body.sha = sha;
   return fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + path, {
     method: 'PUT',
     headers: {
@@ -751,11 +758,117 @@ function githubPutFile(path, base64Content, message) {
       'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ message: message, content: base64Content })
+    body: JSON.stringify(body)
   }).then(function(r) {
     if(!r.ok) return r.json().then(function(d) { throw new Error(d.message || ('HTTP ' + r.status)); });
     return r.json();
   });
+}
+
+function githubPutFileAuto(path, base64Content, message) {
+  var token = getGithubToken();
+  return fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + path, {
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' }
+  }).then(function(r) {
+    return r.ok ? r.json() : null;
+  }).catch(function() {
+    return null;
+  }).then(function(existing) {
+    return githubPutFile(path, base64Content, message, existing ? existing.sha : null);
+  });
+}
+
+function githubGetFile(path) {
+  var token = getGithubToken();
+  return fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + path, {
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' }
+  }).then(function(r) {
+    if(!r.ok) return r.json().then(function(d) { throw new Error(d.message || ('HTTP ' + r.status)); });
+    return r.json();
+  });
+}
+
+function base64ToUtf8(b64) {
+  return decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
+}
+
+function verNotasPublicadas() {
+  var token = getGithubToken();
+  if(!token) { showModal(); setStatus('Ingresa tu token de GitHub para ver notas publicadas.', 'err'); return; }
+
+  document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-t">Cargando notas publicadas...</div></div>';
+
+  githubGetFile('src/content/posts').then(function(files) {
+    var mdFiles = (Array.isArray(files) ? files : []).filter(function(f) { return f.name && f.name.indexOf('.md') === f.name.length - 3; });
+    if(!mdFiles.length) return [];
+    return Promise.all(mdFiles.map(function(f) {
+      return githubGetFile(f.path).then(function(data) {
+        var contenido = base64ToUtf8(data.content);
+        var titleMatch = contenido.match(/title:\s*"((?:[^"\\]|\\.)*)"/);
+        return { path: f.path, sha: data.sha, titulo: titleMatch ? titleMatch[1].replace(/\\"/g, '"') : f.name, contenido: contenido };
+      });
+    }));
+  }).then(function(notas) {
+    mostrarNotasPublicadas(notas);
+  }).catch(function(e) {
+    setStatus('Error cargando notas publicadas: ' + e.message, 'err');
+    document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-t">Error al cargar</div><div class="empty-s">' + e.message + '</div></div>';
+  });
+}
+
+function mostrarNotasPublicadas(notas) {
+  document.getElementById('n-count').textContent = notas.length + ' notas publicadas';
+  if(!notas.length) {
+    document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div class="empty-t">Todavia no hay notas publicadas</div></div>';
+    return;
+  }
+  var html = '';
+  notas.forEach(function(n, i) {
+    html += '<div class="ncard" onclick="cargarNotaParaEditar(' + i + ')">' +
+      '<div class="nc-titulo">' + n.titulo + '</div>' +
+      '<div class="nc-footer"><span class="nc-cat">' + n.path + '</span>' +
+      '<div class="nc-btns"><button class="btn-usar">Editar →</button></div></div>' +
+      '</div>';
+  });
+  document.getElementById('left-panel').innerHTML = html;
+  window._notasPublicadas = notas;
+}
+
+function cargarNotaParaEditar(i) {
+  var n = window._notasPublicadas[i];
+  var partes = n.contenido.split('---');
+  var frontmatter = partes[1] || '';
+  var cuerpo = partes.slice(2).join('---').replace(/^\n+/, '').trim();
+
+  var titleMatch = frontmatter.match(/title:\s*"((?:[^"\\]|\\.)*)"/);
+  var catMatch = frontmatter.match(/category:\s*"([^"]*)"/);
+  var imageMatch = frontmatter.match(/image:\s*"([^"]*)"/);
+
+  document.getElementById('e-titulo').value = titleMatch ? titleMatch[1].replace(/\\"/g, '"') : '';
+  document.getElementById('e-texto').value = cuerpo;
+
+  var cat = catMatch ? catMatch[1] : '';
+  var seccion = 'Local';
+  for(var s in SECCION_A_CATEGORIA) {
+    if(SECCION_A_CATEGORIA[s] === cat) { seccion = s; break; }
+  }
+  document.getElementById('e-sec').value = seccion;
+  document.getElementById('e-tits').value = '';
+
+  var dateMatch = frontmatter.match(/date:\s*(\S+)/);
+  var slugDelPath = n.path.replace(/^.*\//, '').replace(/\.md$/, '');
+
+  noticiaActual = null;
+  resetImagenManual();
+  notaEditando = {
+    path: n.path,
+    sha: n.sha,
+    slug: slugDelPath,
+    imagen: imageMatch ? imageMatch[1] : null,
+    fecha: dateMatch ? dateMatch[1] : null
+  };
+  wc();
+  setStatus('Editando nota publicada. Modifica el texto y presiona Publicar en el sitio para guardar los cambios.', 'ok');
 }
 
 function publicarEnSitio() {
@@ -767,28 +880,31 @@ function publicarEnSitio() {
   var token = getGithubToken();
   if(!token) { showModal(); setStatus('Ingresa tu token de GitHub para publicar en el sitio.', 'err'); return; }
 
+  var esEdicion = !!notaEditando;
   var categoria = SECCION_A_CATEGORIA[seccion] || 'la-ciudad';
-  var slug = slugify(titulo);
+  var slug = esEdicion ? notaEditando.slug : slugify(titulo);
+  var postPath = esEdicion ? notaEditando.path : ('src/content/posts/' + slug + '.md');
   var excerpt = texto.replace(/\s+/g, ' ').trim().substring(0, 200);
-  var fecha = new Date().toISOString().substring(0, 10);
+  var fecha = (esEdicion && notaEditando.fecha) ? notaEditando.fecha : new Date().toISOString().substring(0, 10);
 
   var btn = document.querySelector('.btn-pub');
   btn.disabled = true;
-  setStatus('Publicando en el sitio...', 'loading');
+  setStatus(esEdicion ? 'Guardando cambios...' : 'Publicando en el sitio...', 'loading');
 
   var imgEl = document.getElementById('img-result');
   var tieneImagenIA = imgEl && imgEl.src && imgEl.src.indexOf('data:image') === 0;
   var imagenBase64 = imagenManualBase64 || (tieneImagenIA ? imgEl.src.split(',')[1] : null);
   var imagePath = imagenBase64 ? 'images/' + slug + '.png' : null;
+  var imagenFinal = imagePath ? '/' + imagePath : (esEdicion && notaEditando.imagen ? notaEditando.imagen : '/logo-banner-desktop.png');
 
   var subirImagen = imagenBase64
-    ? githubPutFile('public/' + imagePath, imagenBase64, 'Agregar imagen: ' + titulo)
+    ? githubPutFileAuto('public/' + imagePath, imagenBase64, 'Agregar imagen: ' + titulo)
     : Promise.resolve();
 
   var subirImagenesInline = Promise.all(imagenesInline.map(function(img, i) {
     var n = i + 1;
     var path = 'images/' + slug + '-' + n + '.png';
-    return githubPutFile('public/' + path, img.base64, 'Agregar imagen ' + n + ': ' + titulo).then(function() {
+    return githubPutFileAuto('public/' + path, img.base64, 'Agregar imagen ' + n + ': ' + titulo).then(function() {
       return { n: n, path: path };
     });
   }));
@@ -803,13 +919,14 @@ function publicarEnSitio() {
       'title: "' + yamlEscape(titulo) + '"\n' +
       'excerpt: "' + yamlEscape(excerpt) + '"\n' +
       'category: "' + categoria + '"\n' +
-      'image: "' + (imagePath ? '/' + imagePath : '/logo-banner-desktop.png') + '"\n' +
+      'image: "' + imagenFinal + '"\n' +
       'date: ' + fecha + '\n' +
       'author: "Actualidad MDP"\n' +
       '---\n\n' + textoFinal + '\n';
-    return githubPutFile('src/content/posts/' + slug + '.md', utf8ToBase64(frontmatter), 'Publicar: ' + titulo);
+    return githubPutFile(postPath, utf8ToBase64(frontmatter), (esEdicion ? 'Editar: ' : 'Publicar: ') + titulo, esEdicion ? notaEditando.sha : null);
   }).then(function() {
-    setStatus('✓ Publicado. El sitio se actualiza solo en 1-2 minutos: actualidad-mdp-web.merlojonatan1984.workers.dev/noticia/' + slug + '/', 'ok');
+    setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + '. El sitio se actualiza solo en 1-2 minutos: actualidad-mdp-web.merlojonatan1984.workers.dev/noticia/' + slug + '/', 'ok');
+    notaEditando = null;
   }).catch(function(e) {
     setStatus('Error al publicar: ' + e.message, 'err');
   }).finally(function() {
@@ -838,6 +955,7 @@ function limpiar() {
   document.getElementById('wc').textContent = '0 palabras';
   document.getElementById('img-box').style.display = 'none';
   noticiaActual = null;
+  notaEditando = null;
   resetImagenManual();
   document.querySelectorAll('.ncard').forEach(function(c) { c.classList.remove('sel'); });
   setStatus('Listo para una nueva noticia.', '');
