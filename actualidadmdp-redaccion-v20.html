@@ -160,16 +160,12 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <div class="modal-title" id="confirmar-titulo-preview"></div>
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin:14px 0 4px">¿En qué solapa se publica?</label>
     <select class="modal-input fsel" id="confirmar-sec">
-      <option value="Local">📍 Local</option>
-      <option value="Policiales">🚔 Policiales</option>
-      <option value="Política">🏛 Política</option>
-      <option value="Economía">💰 Economía</option>
-      <option value="Turismo">🌊 Turismo</option>
-      <option value="Deportes">⚽ Deportes</option>
-      <option value="Cultura">🎨 Cultura</option>
-      <option value="Teatro">🎭 Teatro</option>
-      <option value="Nacional">🇦🇷 Nacional</option>
-      <option value="Mundo">🌎 Mundo</option>
+      <option value="la-ciudad">📍 La Ciudad</option>
+      <option value="provincia">🏛 Provincia</option>
+      <option value="deportes">⚽ Deportes</option>
+      <option value="arte-y-espectaculo">🎭 Arte y Espectáculo</option>
+      <option value="policiales">🚔 Policiales</option>
+      <option value="mundo">🌎 Mundo</option>
     </select>
     <div class="modal-hint" id="confirmar-cat-preview" style="margin-top:6px"></div>
     <button class="modal-btn" onclick="confirmarYPublicar()" style="margin-top:16px">Confirmar y publicar →</button>
@@ -204,14 +200,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <input class="search" id="search-inp" placeholder="Buscar en las noticias..." type="text" oninput="filtrar()"/>
   <select class="cat-sel" id="cat-sel" onchange="filtrar()">
     <option value="">Todas las categorías</option>
-    <option value="local">📍 Local MDP</option>
-    <option value="policiales">🚔 Policiales</option>
+    <option value="la-ciudad">📍 La Ciudad</option>
+    <option value="provincia">🏛 Provincia</option>
     <option value="deportes">⚽ Deportes</option>
-    <option value="turismo">🌊 Turismo</option>
-    <option value="cultura">🎭 Cultura y Teatro</option>
-    <option value="economia">💰 Economía</option>
-    <option value="politica">🏛 Política</option>
-    <option value="nacional">🇦🇷 Nacional</option>
+    <option value="arte-y-espectaculo">🎭 Arte y Espectáculo</option>
+    <option value="policiales">🚔 Policiales</option>
     <option value="mundo">🌎 Mundo</option>
   </select>
   <button class="btn-upd" id="btn-upd" onclick="cargar()">
@@ -259,16 +252,12 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
       <div class="fl">
         <label>Sección</label>
         <select class="fi fsel" id="e-sec">
-          <option value="Local">📍 Local</option>
-          <option value="Policiales">🚔 Policiales</option>
-          <option value="Política">🏛 Política</option>
-          <option value="Economía">💰 Economía</option>
-          <option value="Turismo">🌊 Turismo</option>
-          <option value="Deportes">⚽ Deportes</option>
-          <option value="Cultura">🎨 Cultura</option>
-          <option value="Teatro">🎭 Teatro</option>
-          <option value="Nacional">🇦🇷 Nacional</option>
-          <option value="Mundo">🌎 Mundo</option>
+          <option value="la-ciudad">📍 La Ciudad</option>
+          <option value="provincia">🏛 Provincia</option>
+          <option value="deportes">⚽ Deportes</option>
+          <option value="arte-y-espectaculo">🎭 Arte y Espectáculo</option>
+          <option value="policiales">🚔 Policiales</option>
+          <option value="mundo">🌎 Mundo</option>
         </select>
       </div>
       <div class="fl">
@@ -324,19 +313,6 @@ var MEDIOS = {
 
 var GITHUB_OWNER = 'merlojonatan1984';
 var GITHUB_REPO = 'actualidad-mdp-web';
-var SECCION_A_CATEGORIA = {
-  'Local': 'la-ciudad',
-  'Policiales': 'policiales',
-  'Política': 'provincia',
-  'Economía': 'provincia',
-  'Turismo': 'la-ciudad',
-  'Deportes': 'deportes',
-  'Cultura': 'arte-y-espectaculo',
-  'Teatro': 'arte-y-espectaculo',
-  'Nacional': 'provincia',
-  'Mundo': 'mundo'
-};
-
 var CATEGORIA_LABELS = {
   'la-ciudad': 'LA CIUDAD',
   'provincia': 'PROVINCIA',
@@ -385,7 +361,7 @@ function procesarSiguienteEnCola() {
   noticiaActual = item;
   notaEditando = null;
   document.getElementById('e-titulo').value = item.titulo;
-  document.getElementById('e-sec').value = item.cat.charAt(0).toUpperCase() + item.cat.slice(1);
+  document.getElementById('e-sec').value = item.cat;
   document.getElementById('e-texto').value = '';
   document.getElementById('e-tits').value = '';
   document.getElementById('img-box').style.display = 'none';
@@ -775,13 +751,12 @@ function cargar() {
 
 function detectarCat(titulo) {
   var t = titulo.toLowerCase();
-  if(t.includes('policial')||t.includes('robo')||t.includes('detenido')||t.includes('crimen')||t.includes('asesina')) return 'policiales';
-  if(t.includes('alvarado')||t.includes('aldosivi')||t.includes('futbol')||t.includes('deporte')||t.includes('gol')) return 'deportes';
-  if(t.includes('turismo')||t.includes('playa')||t.includes('hotel')||t.includes('temporada')) return 'turismo';
-  if(t.includes('teatro')||t.includes('obra')||t.includes('festival')||t.includes('cultura')||t.includes('arte')) return 'cultura';
-  if(t.includes('dolar')||t.includes('inflacion')||t.includes('precio')||t.includes('tarifas')) return 'economia';
-  if(t.includes('politica')||t.includes('eleccion')||t.includes('gobierno')||t.includes('milei')) return 'politica';
-  return 'local';
+  if(t.includes('policial')||t.includes('robo')||t.includes('detenido')||t.includes('crimen')||t.includes('asesina')||t.includes('homicidio')) return 'policiales';
+  if(t.includes('alvarado')||t.includes('aldosivi')||t.includes('kimberley')||t.includes('futbol')||t.includes('deporte')||t.includes('gol')||t.includes('liga')) return 'deportes';
+  if(t.includes('teatro')||t.includes('obra')||t.includes('festival')||t.includes('cultura')||t.includes('arte')||t.includes('musica')||t.includes('cine')) return 'arte-y-espectaculo';
+  if(t.includes('estados unidos')||t.includes('brasil')||t.includes('chile')||t.includes('europa')||t.includes('mundial')||t.includes('internacional')||t.includes('espana')||t.includes('trump')) return 'mundo';
+  if(t.includes('provincia')||t.includes('buenos aires')||t.includes('gobierno')||t.includes('milei')||t.includes('eleccion')||t.includes('dolar')||t.includes('inflacion')) return 'provincia';
+  return 'la-ciudad';
 }
 
 function tiempoRelativo(fecha) {
@@ -812,7 +787,7 @@ function mostrar(noticias) {
       '<div class="nc-top"><input type="checkbox" class="nc-check" onclick="event.stopPropagation();toggleColaSeleccion(' + i + ',this.checked)"/><span class="nc-fuente f' + n.tipo + '">' + n.medio + '</span><span class="nc-time">' + tiempoRelativo(n.fecha) + '</span></div>' +
       '<div class="nc-titulo">' + n.titulo + '</div>' +
       '<div class="nc-desc">' + n.descCorta + '</div>' +
-      '<div class="nc-footer"><span class="nc-cat">📂 ' + n.cat.charAt(0).toUpperCase() + n.cat.slice(1) + '</span>' +
+      '<div class="nc-footer"><span class="nc-cat">📂 ' + (CATEGORIA_LABELS[n.cat] || n.cat) + '</span>' +
       '<div class="nc-btns"><a class="btn-leer" href="' + n.url + '" target="_blank" onclick="event.stopPropagation()">🔗 Leer</a>' +
       '<button class="btn-usar" onclick="event.stopPropagation();seleccionar(' + i + ')">Usar →</button></div></div>' +
       '</div>';
@@ -829,7 +804,7 @@ function seleccionar(i) {
   notaEditando = null;
   document.querySelector('.layout').classList.remove('modo-edicion');
   document.getElementById('e-titulo').value = noticiaActual.titulo;
-  document.getElementById('e-sec').value = noticiaActual.cat.charAt(0).toUpperCase() + noticiaActual.cat.slice(1);
+  document.getElementById('e-sec').value = noticiaActual.cat;
   document.getElementById('e-texto').value = '';
   document.getElementById('e-tits').value = '';
   document.getElementById('img-box').style.display = 'none';
@@ -1099,12 +1074,8 @@ function cargarNotaParaEditar(i) {
   document.getElementById('e-titulo').value = titleMatch ? titleMatch[1].replace(/\\"/g, '"') : '';
   document.getElementById('e-texto').value = cuerpo;
 
-  var cat = catMatch ? catMatch[1] : '';
-  var seccion = 'Local';
-  for(var s in SECCION_A_CATEGORIA) {
-    if(SECCION_A_CATEGORIA[s] === cat) { seccion = s; break; }
-  }
-  document.getElementById('e-sec').value = seccion;
+  var cat = catMatch ? catMatch[1] : 'la-ciudad';
+  document.getElementById('e-sec').value = cat;
   document.getElementById('e-tits').value = '';
 
   var dateMatch = frontmatter.match(/date:\s*(\S+)/);
@@ -1143,8 +1114,7 @@ function publicarEnSitio() {
 }
 
 function actualizarPreviewCategoria() {
-  var sec = document.getElementById('confirmar-sec').value;
-  var cat = SECCION_A_CATEGORIA[sec] || 'la-ciudad';
+  var cat = document.getElementById('confirmar-sec').value;
   document.getElementById('confirmar-cat-preview').textContent = 'Va a aparecer en la solapa: ' + (CATEGORIA_LABELS[cat] || cat);
 }
 
@@ -1160,7 +1130,7 @@ function ejecutarPublicacion() {
   var seccion = document.getElementById('e-sec').value;
 
   var esEdicion = !!notaEditando;
-  var categoria = SECCION_A_CATEGORIA[seccion] || 'la-ciudad';
+  var categoria = seccion || 'la-ciudad';
   var slug = esEdicion ? notaEditando.slug : slugify(titulo);
   var postPath = esEdicion ? notaEditando.path : ('src/content/posts/' + slug + '.md');
   var excerpt = texto.replace(/\s+/g, ' ').trim().substring(0, 200);
@@ -1247,7 +1217,7 @@ function limpiar() {
   document.getElementById('e-titulo').value = '';
   document.getElementById('e-texto').value = '';
   document.getElementById('e-tits').value = '';
-  document.getElementById('e-sec').value = 'Local';
+  document.getElementById('e-sec').value = 'la-ciudad';
   document.getElementById('wc').textContent = '0 palabras';
   document.getElementById('img-box').style.display = 'none';
   noticiaActual = null;
