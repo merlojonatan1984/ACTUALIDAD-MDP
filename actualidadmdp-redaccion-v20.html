@@ -900,22 +900,32 @@ function publicarEnSitio() {
   var imagePath = imagenBase64 ? 'images/' + slug + '.png' : null;
   var imagenFinal = imagePath ? '/' + imagePath : (esEdicion && notaEditando.imagen ? notaEditando.imagen : '/logo-banner-desktop.png');
 
-  var subirImagen = imagenBase64
-    ? githubPutFileAuto('public/' + imagePath, imagenBase64, 'Agregar imagen: ' + titulo)
-    : Promise.resolve();
+  // GitHub crea un commit por archivo subido, asi que hay que subirlos
+  // de a uno en orden -- si se suben en paralelo, se pisan entre si.
+  var pasos = [];
+  var subidasInline = [];
 
-  var subirImagenesInline = Promise.all(imagenesInline.map(function(img, i) {
+  if(imagenBase64) {
+    pasos.push(function() {
+      return githubPutFileAuto('public/' + imagePath, imagenBase64, 'Agregar imagen: ' + titulo);
+    });
+  }
+
+  imagenesInline.forEach(function(img, i) {
     var n = i + 1;
     var path = 'images/' + slug + '-' + n + '.png';
-    return githubPutFileAuto('public/' + path, img.base64, 'Agregar imagen ' + n + ': ' + titulo).then(function() {
-      return { n: n, path: path };
+    pasos.push(function() {
+      return githubPutFileAuto('public/' + path, img.base64, 'Agregar imagen ' + n + ': ' + titulo).then(function() {
+        subidasInline.push({ n: n, path: path });
+      });
     });
-  }));
+  });
 
-  Promise.all([subirImagen, subirImagenesInline]).then(function(results) {
-    var subidas = results[1];
+  var cadena = pasos.reduce(function(prev, paso) { return prev.then(paso); }, Promise.resolve());
+
+  cadena.then(function() {
     var textoFinal = texto;
-    subidas.forEach(function(s) {
+    subidasInline.forEach(function(s) {
       textoFinal = textoFinal.split('[IMG:' + s.n + ']').join('![](/' + s.path + ')');
     });
     var frontmatter = '---\n' +
