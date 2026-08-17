@@ -1299,23 +1299,28 @@ function ejecutarPublicacion() {
     var urlNota = 'https://actualidadmdp.com.ar/noticia/' + slug + '/';
     var debePublicarFb = !esEdicion && !!getFacebookToken() && !!getFacebookPageId() && window._publicarFbEsteVez !== false;
 
-    return (debePublicarFb ? publicarEnFacebook(titulo, excerpt, urlNota) : Promise.resolve(null))
-      .then(function() {
-        notaEditando = null;
-        document.querySelector('.layout').classList.remove('modo-edicion');
-        if(colaActiva) {
-          colaPos++;
-          setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + ')' + (debePublicarFb ? ' + Facebook' : '') + '. Pasando a la siguiente...', 'ok');
-          setTimeout(procesarSiguienteEnCola, 1200);
-        } else {
-          setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : ('Publicado' + (debePublicarFb ? ' y compartido en Facebook' : ''))) + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
-        }
-      })
-      .catch(function(e) {
-        notaEditando = null;
-        document.querySelector('.layout').classList.remove('modo-edicion');
-        setStatus('✓ Publicado en el sitio, pero falló Facebook: ' + e.message, 'err');
-      });
+    if(debePublicarFb) {
+      // Se espera a que Cloudflare termine de desplegar el sitio antes de
+      // avisarle a Facebook -- si Facebook lee la nota antes de que exista,
+      // se queda para siempre con una vista previa sin imagen.
+      setTimeout(function() {
+        publicarEnFacebook(titulo, excerpt, urlNota).then(function() {
+          setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
+        }).catch(function(e) {
+          setStatus('Error al compartir en Facebook "' + titulo + '": ' + e.message, 'err');
+        });
+      }, 120000);
+    }
+
+    notaEditando = null;
+    document.querySelector('.layout').classList.remove('modo-edicion');
+    if(colaActiva) {
+      colaPos++;
+      setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + ')' + (debePublicarFb ? ' (Facebook en 2 min)' : '') + '. Pasando a la siguiente...', 'ok');
+      setTimeout(procesarSiguienteEnCola, 1200);
+    } else {
+      setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + (debePublicarFb ? '. Se comparte en Facebook en 2 minutos' : '') + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
+    }
   }).catch(function(e) {
     setStatus('Error al publicar: ' + e.message, 'err');
   }).finally(function() {
