@@ -1049,16 +1049,44 @@ function mostrarNotasPublicadas(notas) {
     document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div class="empty-t">Todavia no hay notas publicadas</div></div>';
     return;
   }
+  var opcionesCategoria = Object.keys(CATEGORIA_LABELS).map(function(slug) {
+    return { slug: slug, label: CATEGORIA_LABELS[slug] };
+  });
+
   var html = '';
   notas.forEach(function(n, i) {
+    var catMatch = n.contenido.match(/category:\s*"([^"]*)"/);
+    var cat = catMatch ? catMatch[1] : 'la-ciudad';
+    var selectHtml = '<select class="fi" style="font-size:10px;padding:3px 6px;width:auto;" onclick="event.stopPropagation()" onchange="cambiarCategoriaRapido(' + i + ', this.value, this)">' +
+      opcionesCategoria.map(function(o) {
+        return '<option value="' + o.slug + '"' + (o.slug === cat ? ' selected' : '') + '>' + o.label + '</option>';
+      }).join('') + '</select>';
     html += '<div class="ncard" onclick="cargarNotaParaEditar(' + i + ')">' +
       '<div class="nc-titulo">' + n.titulo + '</div>' +
-      '<div class="nc-footer"><span class="nc-cat">' + n.path + '</span>' +
-      '<div class="nc-btns"><button class="btn-usar">Editar →</button></div></div>' +
+      '<div class="nc-footer"><span class="nc-cat" id="cat-guardado-' + i + '"></span>' +
+      '<div class="nc-btns">' + selectHtml + '<button class="btn-usar">Editar →</button></div></div>' +
       '</div>';
   });
   document.getElementById('left-panel').innerHTML = html;
   window._notasPublicadas = notas;
+}
+
+function cambiarCategoriaRapido(i, nuevaCategoria, selectEl) {
+  var n = window._notasPublicadas[i];
+  var nuevoContenido = n.contenido.replace(/category:\s*"[^"]*"/, 'category: "' + nuevaCategoria + '"');
+  var indicador = document.getElementById('cat-guardado-' + i);
+  if(indicador) indicador.textContent = 'Guardando...';
+  if(selectEl) selectEl.disabled = true;
+
+  githubPutFile(n.path, utf8ToBase64(nuevoContenido), 'Cambiar categoria: ' + n.titulo, n.sha).then(function(res) {
+    n.contenido = nuevoContenido;
+    if(res && res.content && res.content.sha) n.sha = res.content.sha;
+    if(indicador) indicador.textContent = '✓ ' + (CATEGORIA_LABELS[nuevaCategoria] || nuevaCategoria);
+  }).catch(function(e) {
+    if(indicador) indicador.textContent = 'Error: ' + e.message;
+  }).finally(function() {
+    if(selectEl) selectEl.disabled = false;
+  });
 }
 
 function cargarNotaParaEditar(i) {
