@@ -219,6 +219,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <button class="btn-upd" id="btn-cola" onclick="iniciarCola()" style="background:var(--purple);display:none">
     🚀 Procesar cola (<span id="cola-count">0</span>)
   </button>
+  <button class="btn-upd" id="btn-horoscopo" onclick="actualizarHoroscopo()" style="background:#7c3aed">
+    🔮 Actualizar horóscopo
+  </button>
   <span class="n-count" id="n-count"></span>
 </div>
 
@@ -324,9 +327,9 @@ var SECCION_A_CATEGORIA = {
   'Turismo': 'la-ciudad',
   'Deportes': 'deportes',
   'Cultura': 'arte-y-espectaculo',
-  'Teatro': 'cartelera',
+  'Teatro': 'arte-y-espectaculo',
   'Nacional': 'provincia',
-  'Mundo': 'cartelera'
+  'Mundo': 'mundo'
 };
 
 var CATEGORIA_LABELS = {
@@ -335,7 +338,7 @@ var CATEGORIA_LABELS = {
   'deportes': 'DEPORTES',
   'arte-y-espectaculo': 'ARTE Y ESPECTACULO',
   'policiales': 'POLICIALES',
-  'cartelera': 'CARTELERA'
+  'mundo': 'MUNDO'
 };
 
 var medioActual = 'todos';
@@ -392,6 +395,43 @@ function procesarSiguienteEnCola() {
     setStatus('Cola ' + (colaPos + 1) + '/' + colaItems.length + ': error generando texto (' + e.message + '). Podes escribirlo a mano y publicar igual.', 'err');
   });
 }
+function actualizarHoroscopo() {
+  var token = getGithubToken();
+  if(!token) { showModal(); setStatus('Ingresa tu token de GitHub para actualizar el horoscopo.', 'err'); return; }
+
+  var btn = document.getElementById('btn-horoscopo');
+  btn.disabled = true;
+  setStatus('Generando horoscopo del dia...', 'loading');
+
+  var signos = ['Aries', 'Tauro', 'Geminis', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Escorpio', 'Sagitario', 'Capricornio', 'Acuario', 'Piscis'];
+  var prompt = 'Escribi el horoscopo de hoy para los 12 signos del zodiaco, en espanol, tono ameno y breve (1-2 oraciones por signo, sobre trabajo, amor o salud). ' +
+    'Respondes EXACTAMENTE en este formato, una linea por signo, sin numerar, sin texto antes ni despues:\n' +
+    signos.map(function(s) { return s + ': [texto del horoscopo]'; }).join('\n');
+
+  llamarIA(prompt).then(function(res) {
+    var lineas = res.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    var nombresConTilde = { 'Geminis': 'Géminis', 'Cancer': 'Cáncer', 'Sagitario': 'Sagitario', 'Capricornio': 'Capricornio', 'Acuario': 'Acuario', 'Piscis': 'Piscis' };
+    var nuevosSignos = [];
+    lineas.forEach(function(linea) {
+      var m = linea.match(/^([A-Za-zÁÉÍÓÚáéíóú]+):\s*(.+)$/);
+      if(!m) return;
+      var nombre = m[1];
+      var nombreFinal = nombresConTilde[nombre] || nombre;
+      nuevosSignos.push({ signo: nombreFinal, texto: m[2].trim() });
+    });
+    if(nuevosSignos.length < 10) throw new Error('La IA no devolvio los 12 signos, intenta de nuevo.');
+
+    var data = { updatedAt: new Date().toISOString().substring(0, 10), signos: nuevosSignos };
+    return githubPutFileAuto('src/data/horoscopo.json', utf8ToBase64(JSON.stringify(data, null, 2)), 'Actualizar horoscopo del dia');
+  }).then(function() {
+    setStatus('✓ Horoscopo actualizado. El sitio se actualiza solo en 1-2 minutos.', 'ok');
+  }).catch(function(e) {
+    setStatus('Error actualizando horoscopo: ' + e.message, 'err');
+  }).finally(function() {
+    btn.disabled = false;
+  });
+}
+
 var notaEditando = null;
 var imagenManualBase64 = null;
 var imagenesInline = [];
