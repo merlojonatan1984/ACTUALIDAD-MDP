@@ -42,6 +42,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .ncard.sel{border-color:var(--accent);border-width:2px;background:#f0f8ff}
 .nc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;gap:8px}
 .nc-fuente{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap}
+.nc-check{margin:0;cursor:pointer;flex-shrink:0}
 .floc{background:#dbeafe;color:#1e3a5f}
 .fnac{background:#fef3c7;color:#78350f}
 .fint{background:#dcfce7;color:#14532d}
@@ -215,6 +216,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <button class="btn-upd" id="btn-publicadas" onclick="verNotasPublicadas()" style="background:var(--navy)">
     📂 Notas publicadas
   </button>
+  <button class="btn-upd" id="btn-cola" onclick="iniciarCola()" style="background:var(--purple);display:none">
+    🚀 Procesar cola (<span id="cola-count">0</span>)
+  </button>
   <span class="n-count" id="n-count"></span>
 </div>
 
@@ -336,6 +340,57 @@ var CATEGORIA_LABELS = {
 var medioActual = 'todos';
 var todasNoticias = [];
 var noticiaActual = null;
+var colaSeleccion = [];
+var colaItems = [];
+var colaPos = 0;
+var colaActiva = false;
+
+function toggleColaSeleccion(i, checked) {
+  var idx = colaSeleccion.indexOf(i);
+  if(checked && idx === -1) colaSeleccion.push(i);
+  if(!checked && idx !== -1) colaSeleccion.splice(idx, 1);
+  var btn = document.getElementById('btn-cola');
+  document.getElementById('cola-count').textContent = colaSeleccion.length;
+  btn.style.display = colaSeleccion.length > 0 ? 'flex' : 'none';
+}
+
+function iniciarCola() {
+  if(!colaSeleccion.length) return;
+  var token = getGithubToken();
+  if(!token) { showModal(); setStatus('Ingresa tu token de GitHub para procesar la cola.', 'err'); return; }
+  colaItems = colaSeleccion.slice().sort(function(a, b) { return a - b; }).map(function(i) { return window._noticias[i]; });
+  colaPos = 0;
+  colaActiva = true;
+  procesarSiguienteEnCola();
+}
+
+function procesarSiguienteEnCola() {
+  if(colaPos >= colaItems.length) {
+    colaActiva = false;
+    colaSeleccion = [];
+    document.getElementById('btn-cola').style.display = 'none';
+    setStatus('✓ Cola terminada: ' + colaItems.length + ' notas procesadas.', 'ok');
+    return;
+  }
+  var item = colaItems[colaPos];
+  noticiaActual = item;
+  notaEditando = null;
+  document.getElementById('e-titulo').value = item.titulo;
+  document.getElementById('e-sec').value = item.cat.charAt(0).toUpperCase() + item.cat.slice(1);
+  document.getElementById('e-texto').value = '';
+  document.getElementById('e-tits').value = '';
+  document.getElementById('img-box').style.display = 'none';
+  resetImagenManual();
+  wc();
+  setStatus('Cola ' + (colaPos + 1) + '/' + colaItems.length + ': generando texto de "' + item.titulo.substring(0, 40) + '..."', 'loading');
+
+  generarTextoParaNoticia(item).then(function(res) {
+    if(res) { document.getElementById('e-texto').value = res; wc(); }
+    setStatus('Cola ' + (colaPos + 1) + '/' + colaItems.length + ': agrega la imagen y presiona Publicar para pasar a la siguiente.', 'ok');
+  }).catch(function(e) {
+    setStatus('Cola ' + (colaPos + 1) + '/' + colaItems.length + ': error generando texto (' + e.message + '). Podes escribirlo a mano y publicar igual.', 'err');
+  });
+}
 var notaEditando = null;
 var imagenManualBase64 = null;
 var imagenesInline = [];
@@ -655,7 +710,7 @@ function mostrar(noticias) {
   var html = '';
   noticias.forEach(function(n, i) {
     html += '<div class="ncard" id="nc' + i + '" onclick="seleccionar(' + i + ')">' +
-      '<div class="nc-top"><span class="nc-fuente f' + n.tipo + '">' + n.medio + '</span><span class="nc-time">' + tiempoRelativo(n.fecha) + '</span></div>' +
+      '<div class="nc-top"><input type="checkbox" class="nc-check" onclick="event.stopPropagation();toggleColaSeleccion(' + i + ',this.checked)"/><span class="nc-fuente f' + n.tipo + '">' + n.medio + '</span><span class="nc-time">' + tiempoRelativo(n.fecha) + '</span></div>' +
       '<div class="nc-titulo">' + n.titulo + '</div>' +
       '<div class="nc-desc">' + n.descCorta + '</div>' +
       '<div class="nc-footer"><span class="nc-cat">📂 ' + n.cat.charAt(0).toUpperCase() + n.cat.slice(1) + '</span>' +
@@ -710,10 +765,14 @@ function llamarIA(prompt) {
   });
 }
 
+function generarTextoParaNoticia(noticia) {
+  return llamarIA('Redacta una nota periodistica completa y bien desarrollada (4 a 6 parrafos) a partir de esta informacion, de manera clara y directa. Usa TODA la informacion provista, desarrollandola en detalle. No agregues opinion, no inventes datos ni cifras que no esten en la informacion original, no agregues impacto local salvo que ya este en la informacion.\n\nTITULO: ' + noticia.titulo + '\nINFORMACION DISPONIBLE: ' + noticia.desc + '\n\nResponde SOLO con el texto de la nota. Sin titulo, sin aclaraciones.');
+}
+
 function generarConIA() {
   if(!noticiaActual) { setStatus('Selecciona una noticia primero.', 'err'); return; }
   setStatus('Generando nota con IA...', 'loading');
-  llamarIA('Redacta una nota periodistica completa y bien desarrollada (4 a 6 parrafos) a partir de esta informacion, de manera clara y directa. Usa TODA la informacion provista, desarrollandola en detalle. No agregues opinion, no inventes datos ni cifras que no esten en la informacion original, no agregues impacto local salvo que ya este en la informacion.\n\nTITULO: ' + noticiaActual.titulo + '\nINFORMACION DISPONIBLE: ' + noticiaActual.desc + '\n\nResponde SOLO con el texto de la nota. Sin titulo, sin aclaraciones.').then(function(res) {
+  generarTextoParaNoticia(noticiaActual).then(function(res) {
     if(res) {
       document.getElementById('e-texto').value = res;
       wc();
@@ -1054,8 +1113,14 @@ function ejecutarPublicacion() {
       '---\n\n' + textoFinal + '\n';
     return githubPutFile(postPath, utf8ToBase64(frontmatter), (esEdicion ? 'Editar: ' : 'Publicar: ') + titulo, esEdicion ? notaEditando.sha : null);
   }).then(function() {
-    setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + '. El sitio se actualiza solo en 1-2 minutos: actualidad-mdp-web.merlojonatan1984.workers.dev/noticia/' + slug + '/', 'ok');
     notaEditando = null;
+    if(colaActiva) {
+      colaPos++;
+      setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + '). Pasando a la siguiente...', 'ok');
+      setTimeout(procesarSiguienteEnCola, 1200);
+    } else {
+      setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + '. El sitio se actualiza solo en 1-2 minutos: actualidad-mdp-web.merlojonatan1984.workers.dev/noticia/' + slug + '/', 'ok');
+    }
   }).catch(function(e) {
     setStatus('Error al publicar: ' + e.message, 'err');
   }).finally(function() {
