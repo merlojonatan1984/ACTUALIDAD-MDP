@@ -456,6 +456,9 @@ function videoEmbedHtml(url) {
   if(/facebook\.com|fb\.watch/.test(url)) {
     return '<div class="video-embed"><iframe src="https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(url) + '&show_text=false" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
   }
+  if(/(?:twitter\.com|x\.com)\/\w+\/status\/\d+/.test(url)) {
+    return '<blockquote class="twitter-tweet"><a href="' + url + '"></a></blockquote><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"><' + '/script>';
+  }
   return '<p><a href="' + url + '" target="_blank" rel="noopener noreferrer">▶ Ver video</a></p>';
 }
 
