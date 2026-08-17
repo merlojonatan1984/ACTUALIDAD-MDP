@@ -78,6 +78,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .fotos-libres img:hover{border-color:var(--accent)}
 .fotos-libres img.sel{border-color:var(--green)}
 .fotos-libres-hint{font-size:10px;color:var(--muted);margin-top:4px}
+.texto-toolbar{display:flex;gap:6px;margin-bottom:5px}
+.mini-btn{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:4px 9px;font-size:10px;font-weight:600;color:var(--sea);cursor:pointer}
+.mini-btn:hover{background:var(--border)}
 .rbody{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .fl{display:flex;flex-direction:column;gap:3px}
 .fl label{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
@@ -232,6 +235,12 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
       </div>
       <div class="fl">
         <label>Texto de la nota</label>
+        <div class="texto-toolbar">
+          <button type="button" class="mini-btn" onclick="insertarSubtitulo()">🔖 Subtítulo</button>
+          <button type="button" class="mini-btn" onclick="document.getElementById('e-imagen-inline-file').click()">🖼 Imagen acá</button>
+          <input id="e-imagen-inline-file" type="file" accept="image/*" style="display:none" onchange="insertarImagenEnTexto(event)"/>
+          <span class="fotos-libres-hint" id="imagenes-inline-count" style="margin:0"></span>
+        </div>
         <textarea class="fi fta" id="e-texto" placeholder="Seleccioná una noticia y presioná Generar con IA..." oninput="wc()"></textarea>
         <div class="wc" id="wc">0 palabras</div>
       </div>
@@ -291,6 +300,45 @@ var medioActual = 'todos';
 var todasNoticias = [];
 var noticiaActual = null;
 var imagenManualBase64 = null;
+var imagenesInline = [];
+
+function insertarSubtitulo() {
+  var ta = document.getElementById('e-texto');
+  var pos = ta.selectionStart || 0;
+  var antes = ta.value.substring(0, pos);
+  var despues = ta.value.substring(pos);
+  var separador = (antes && !antes.endsWith('\n\n')) ? (antes.endsWith('\n') ? '\n' : '\n\n') : '';
+  var insercion = separador + '## Subtítulo\n\n';
+  ta.value = antes + insercion + despues;
+  var nuevaPos = (antes + separador + '## ').length;
+  ta.focus();
+  ta.setSelectionRange(nuevaPos, (antes + insercion).length - 2);
+  wc();
+}
+
+function insertarImagenEnTexto(event) {
+  var file = event.target.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var n = imagenesInline.length + 1;
+    imagenesInline.push({ base64: e.target.result.split(',')[1], nombre: file.name });
+    var ta = document.getElementById('e-texto');
+    var pos = ta.selectionStart || ta.value.length;
+    var antes = ta.value.substring(0, pos);
+    var despues = ta.value.substring(pos);
+    var separador = (antes && !antes.endsWith('\n\n')) ? (antes.endsWith('\n') ? '\n' : '\n\n') : '';
+    var token = separador + '[IMG:' + n + ']\n\n';
+    ta.value = antes + token + despues;
+    ta.focus();
+    var nuevaPos = (antes + token).length;
+    ta.setSelectionRange(nuevaPos, nuevaPos);
+    document.getElementById('imagenes-inline-count').textContent = imagenesInline.length + ' imagen(es) en el texto';
+    wc();
+    event.target.value = '';
+  };
+  reader.readAsDataURL(file);
+}
 
 function cargarImagenManual(event) {
   var file = event.target.files[0];
@@ -540,11 +588,13 @@ function seleccionar(i) {
 
 function resetImagenManual() {
   imagenManualBase64 = null;
+  imagenesInline = [];
   document.getElementById('e-imagen-file').value = '';
   document.getElementById('imagen-manual-preview').style.display = 'none';
   document.getElementById('fotos-libres').innerHTML = '';
   document.getElementById('fotos-libres').style.display = 'none';
   document.getElementById('fotos-libres-hint').textContent = '';
+  document.getElementById('imagenes-inline-count').textContent = '';
 }
 
 function llamarIA(prompt) {
@@ -735,7 +785,20 @@ function publicarEnSitio() {
     ? githubPutFile('public/' + imagePath, imagenBase64, 'Agregar imagen: ' + titulo)
     : Promise.resolve();
 
-  subirImagen.then(function() {
+  var subirImagenesInline = Promise.all(imagenesInline.map(function(img, i) {
+    var n = i + 1;
+    var path = 'images/' + slug + '-' + n + '.png';
+    return githubPutFile('public/' + path, img.base64, 'Agregar imagen ' + n + ': ' + titulo).then(function() {
+      return { n: n, path: path };
+    });
+  }));
+
+  Promise.all([subirImagen, subirImagenesInline]).then(function(results) {
+    var subidas = results[1];
+    var textoFinal = texto;
+    subidas.forEach(function(s) {
+      textoFinal = textoFinal.split('[IMG:' + s.n + ']').join('![](/' + s.path + ')');
+    });
     var frontmatter = '---\n' +
       'title: "' + yamlEscape(titulo) + '"\n' +
       'excerpt: "' + yamlEscape(excerpt) + '"\n' +
@@ -743,7 +806,7 @@ function publicarEnSitio() {
       'image: "' + (imagePath ? '/' + imagePath : '/logo-banner-desktop.png') + '"\n' +
       'date: ' + fecha + '\n' +
       'author: "Actualidad MDP"\n' +
-      '---\n\n' + texto + '\n';
+      '---\n\n' + textoFinal + '\n';
     return githubPutFile('src/content/posts/' + slug + '.md', utf8ToBase64(frontmatter), 'Publicar: ' + titulo);
   }).then(function() {
     setStatus('✓ Publicado. El sitio se actualiza solo en 1-2 minutos: actualidad-mdp-web.merlojonatan1984.workers.dev/noticia/' + slug + '/', 'ok');
