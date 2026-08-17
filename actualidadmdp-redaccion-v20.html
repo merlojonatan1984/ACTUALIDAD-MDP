@@ -1019,6 +1019,22 @@ function base64ToUtf8(b64) {
   return decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
 }
 
+function githubDeleteFile(path, sha, message) {
+  var token = getGithubToken();
+  return fetch('https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/' + path, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ message: message, sha: sha })
+  }).then(function(r) {
+    if(!r.ok) return r.json().then(function(d) { throw new Error(d.message || ('HTTP ' + r.status)); });
+    return r.json();
+  });
+}
+
 function verNotasPublicadas() {
   var token = getGithubToken();
   if(!token) { showModal(); setStatus('Ingresa tu token de GitHub para ver notas publicadas.', 'err'); return; }
@@ -1064,7 +1080,8 @@ function mostrarNotasPublicadas(notas) {
     html += '<div class="ncard" onclick="cargarNotaParaEditar(' + i + ')">' +
       '<div class="nc-titulo">' + n.titulo + '</div>' +
       '<div class="nc-footer"><span class="nc-cat" id="cat-guardado-' + i + '"></span>' +
-      '<div class="nc-btns">' + selectHtml + '<button class="btn-usar">Editar →</button></div></div>' +
+      '<div class="nc-btns">' + selectHtml + '<button class="btn-usar">Editar →</button>' +
+      '<button class="btn-usar" style="background:#c0392b" onclick="event.stopPropagation();eliminarNotaPublicada(' + i + ')">🗑 Eliminar</button></div></div>' +
       '</div>';
   });
   document.getElementById('left-panel').innerHTML = html;
@@ -1089,7 +1106,26 @@ function cambiarCategoriaRapido(i, nuevaCategoria, selectEl) {
   });
 }
 
+function eliminarNotaPublicada(i) {
+  var n = window._notasPublicadas[i];
+  if(!confirm('¿Eliminar definitivamente "' + n.titulo + '"? Esta acción no se puede deshacer.')) return;
+
+  var card = document.querySelectorAll('.ncard')[i];
+  var indicador = document.getElementById('cat-guardado-' + i);
+  if(indicador) indicador.textContent = 'Eliminando...';
+
+  githubDeleteFile(n.path, n.sha, 'Eliminar nota: ' + n.titulo).then(function() {
+    if(card) card.remove();
+    window._notasPublicadas[i] = null;
+    setStatus('✓ Nota eliminada: ' + n.titulo, 'ok');
+  }).catch(function(e) {
+    if(indicador) indicador.textContent = 'Error: ' + e.message;
+    setStatus('Error al eliminar: ' + e.message, 'err');
+  });
+}
+
 function cargarNotaParaEditar(i) {
+  if(!window._notasPublicadas[i]) return;
   var n = window._notasPublicadas[i];
   var partes = n.contenido.split('---');
   var frontmatter = partes[1] || '';
