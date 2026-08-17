@@ -1216,16 +1216,19 @@ function confirmarYPublicar() {
   ejecutarPublicacion();
 }
 
-function publicarEnFacebook(titulo, excerpt, urlNota) {
+function publicarEnFacebook(titulo, excerpt, imagenUrl, urlNota) {
   var token = getFacebookToken();
   var pageId = getFacebookPageId();
   if(!token || !pageId) return Promise.resolve(null);
-  var mensaje = titulo + (excerpt ? '\n\n' + excerpt : '');
+  // Se sube como foto (no como /feed con link) porque Facebook ya no
+  // genera la vista previa con imagen de forma confiable para posts
+  // creados via API -- subiendo la foto directo, la imagen sale si o si.
+  var caption = titulo + (excerpt ? '\n\n' + excerpt : '') + '\n\n' + urlNota;
   var body = new URLSearchParams();
-  body.set('message', mensaje);
-  body.set('link', urlNota);
+  body.set('url', imagenUrl);
+  body.set('caption', caption);
   body.set('access_token', token);
-  return fetch('https://graph.facebook.com/v21.0/' + pageId + '/feed', {
+  return fetch('https://graph.facebook.com/v21.0/' + pageId + '/photos', {
     method: 'POST',
     body: body
   }).then(function(r) {
@@ -1301,10 +1304,10 @@ function ejecutarPublicacion() {
 
     if(debePublicarFb) {
       // Se espera a que Cloudflare termine de desplegar el sitio antes de
-      // avisarle a Facebook -- si Facebook lee la nota antes de que exista,
-      // se queda para siempre con una vista previa sin imagen.
+      // avisarle a Facebook, para que la imagen ya este disponible en esa URL.
+      var imagenUrlAbsoluta = 'https://actualidadmdp.com.ar' + imagenFinal;
       setTimeout(function() {
-        publicarEnFacebook(titulo, excerpt, urlNota).then(function() {
+        publicarEnFacebook(titulo, excerpt, imagenUrlAbsoluta, urlNota).then(function() {
           setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
         }).catch(function(e) {
           setStatus('Error al compartir en Facebook "' + titulo + '": ' + e.message, 'err');
