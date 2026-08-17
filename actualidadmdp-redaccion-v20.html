@@ -448,7 +448,7 @@ function llamarIA(prompt) {
   return fetch('https://rss-mdp.merlojonatan1984.workers.dev/ai', {
     method: 'POST',
     headers: {'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-    body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})
+    body: JSON.stringify({model:'claude-sonnet-5',max_tokens:800,messages:[{role:'user',content:prompt}]})
   }).then(function(r) { return r.json(); }).then(function(d) {
     if(d.error) {
       if(d.error.type === 'authentication_error') { localStorage.removeItem('mdp_key'); showModal(); }
