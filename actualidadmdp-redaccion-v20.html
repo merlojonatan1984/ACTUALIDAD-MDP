@@ -265,7 +265,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
         <div class="texto-toolbar">
           <button type="button" class="mini-btn" onclick="insertarSubtitulo()">🔖 Subtítulo</button>
           <button type="button" class="mini-btn" onclick="document.getElementById('e-imagen-inline-file').click()">🖼 Imagen acá</button>
-          <input id="e-imagen-inline-file" type="file" accept="image/*" style="display:none" onchange="insertarImagenEnTexto(event)"/>
+          <input id="e-imagen-inline-file" type="file" accept="image/*" multiple style="display:none" onchange="insertarImagenEnTexto(event)"/>
+          <button type="button" class="mini-btn" onclick="distribuirImagenesAutomaticamente()">🪄 Distribuir imágenes</button>
           <span class="fotos-libres-hint" id="imagenes-inline-count" style="margin:0"></span>
         </div>
         <textarea class="fi fta" id="e-texto" placeholder="Seleccioná una noticia y presioná Generar con IA..." oninput="wc()"></textarea>
@@ -354,8 +355,27 @@ function insertarSubtitulo() {
 }
 
 function insertarImagenEnTexto(event) {
-  var file = event.target.files[0];
-  if(!file) return;
+  var files = Array.prototype.slice.call(event.target.files || []);
+  if(!files.length) return;
+
+  if(files.length > 1) {
+    var pendientes = files.length;
+    files.forEach(function(file) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        imagenesInline.push({ base64: e.target.result.split(',')[1], nombre: file.name });
+        pendientes--;
+        if(pendientes === 0) {
+          document.getElementById('imagenes-inline-count').textContent = imagenesInline.length + ' imagen(es) cargadas. Usa "Distribuir imagenes" para ubicarlas.';
+          event.target.value = '';
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    return;
+  }
+
+  var file = files[0];
   var reader = new FileReader();
   reader.onload = function(e) {
     var n = imagenesInline.length + 1;
@@ -375,6 +395,45 @@ function insertarImagenEnTexto(event) {
     event.target.value = '';
   };
   reader.readAsDataURL(file);
+}
+
+function distribuirImagenesAutomaticamente() {
+  if(!imagenesInline.length) {
+    setStatus('Agrega imagenes primero con "Imagen aca" antes de distribuir.', 'err');
+    return;
+  }
+  var ta = document.getElementById('e-texto');
+  var textoLimpio = ta.value.replace(/\n*\[IMG:\d+\]\n*/g, '\n\n');
+  var parrafos = textoLimpio.split(/\n{2,}/).map(function(p) { return p.trim(); }).filter(function(p) { return p.length > 0; });
+
+  if(parrafos.length < 2) {
+    setStatus('La nota es muy corta para distribuir imagenes entre parrafos.', 'err');
+    return;
+  }
+
+  var n = imagenesInline.length;
+  var espacio = Math.min(2, Math.max(1, Math.round(parrafos.length / (n + 1))));
+
+  var resultado = [];
+  var imgIndex = 0;
+  parrafos.forEach(function(p, i) {
+    resultado.push(p);
+    var esPuntoDeCorte = (i + 1) % espacio === 0;
+    var noEsUltimoParrafo = i < parrafos.length - 1;
+    if(esPuntoDeCorte && imgIndex < n && noEsUltimoParrafo) {
+      imgIndex++;
+      resultado.push('[IMG:' + imgIndex + ']');
+    }
+  });
+  while(imgIndex < n) {
+    imgIndex++;
+    resultado.push('[IMG:' + imgIndex + ']');
+  }
+
+  ta.value = resultado.join('\n\n');
+  document.getElementById('imagenes-inline-count').textContent = n + ' imagen(es) distribuidas en el texto.';
+  wc();
+  setStatus(n + ' imagen(es) distribuidas cada ' + espacio + ' parrafo(s).', 'ok');
 }
 
 function cargarImagenManual(event) {
