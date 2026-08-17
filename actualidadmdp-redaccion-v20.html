@@ -374,17 +374,17 @@ function getKey() { return localStorage.getItem('mdp_key') || ''; }
 function guardarKey() {
   var k = document.getElementById('api-inp').value.trim();
   var g = document.getElementById('gemini-inp').value.trim();
+  var gh = document.getElementById('github-inp').value.trim();
+  var un = document.getElementById('unsplash-inp').value.trim();
+  if(g) localStorage.setItem('gemini_key', g);
+  if(gh) localStorage.setItem('github_token', gh);
+  if(un) localStorage.setItem('unsplash_key', un);
   if(!k.startsWith('sk-ant-')) {
     document.getElementById('api-err').style.display = 'block';
     document.getElementById('api-err').textContent = 'La clave de Anthropic debe empezar con sk-ant-';
     return;
   }
-  var gh = document.getElementById('github-inp').value.trim();
-  var un = document.getElementById('unsplash-inp').value.trim();
   localStorage.setItem('mdp_key', k);
-  if(g) localStorage.setItem('gemini_key', g);
-  if(gh) localStorage.setItem('github_token', gh);
-  if(un) localStorage.setItem('unsplash_key', un);
   document.getElementById('modal-api').style.display = 'none';
 }
 
