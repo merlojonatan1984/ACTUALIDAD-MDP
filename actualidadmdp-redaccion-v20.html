@@ -149,6 +149,30 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   </div>
 </div>
 
+<div class="modal" id="modal-confirmar-publicar" style="display:none">
+  <div class="modal-box">
+    <div class="modal-logo">ACTUALIDAD <span>MDP</span></div>
+    <div class="modal-sub">Confirmar publicación</div>
+    <div class="modal-title" id="confirmar-titulo-preview"></div>
+    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin:14px 0 4px">¿En qué solapa se publica?</label>
+    <select class="modal-input fsel" id="confirmar-sec">
+      <option value="Local">📍 Local</option>
+      <option value="Policiales">🚔 Policiales</option>
+      <option value="Política">🏛 Política</option>
+      <option value="Economía">💰 Economía</option>
+      <option value="Turismo">🌊 Turismo</option>
+      <option value="Deportes">⚽ Deportes</option>
+      <option value="Cultura">🎨 Cultura</option>
+      <option value="Teatro">🎭 Teatro</option>
+      <option value="Nacional">🇦🇷 Nacional</option>
+      <option value="Mundo">🌎 Mundo</option>
+    </select>
+    <div class="modal-hint" id="confirmar-cat-preview" style="margin-top:6px"></div>
+    <button class="modal-btn" onclick="confirmarYPublicar()" style="margin-top:16px">Confirmar y publicar →</button>
+    <button class="modal-btn" onclick="document.getElementById('modal-confirmar-publicar').style.display='none'" style="margin-top:8px;background:var(--border);color:var(--muted)">Cancelar</button>
+  </div>
+</div>
+
 <div class="header">
   <div class="logo">ACTUALIDAD <span>MDP</span> <span style="font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:400;color:rgba(255,255,255,0.3);letter-spacing:0"> · Redacción</span></div>
   <div class="header-right">
@@ -297,6 +321,15 @@ var SECCION_A_CATEGORIA = {
   'Teatro': 'cartelera',
   'Nacional': 'provincia',
   'Mundo': 'provincia'
+};
+
+var CATEGORIA_LABELS = {
+  'la-ciudad': 'LA CIUDAD',
+  'provincia': 'PROVINCIA',
+  'deportes': 'DEPORTES',
+  'arte-y-espectaculo': 'ARTE Y ESPECTACULO',
+  'policiales': 'POLICIALES',
+  'cartelera': 'CARTELERA'
 };
 
 var medioActual = 'todos';
@@ -877,11 +910,35 @@ function publicarEnSitio() {
   if(btnCheck && btnCheck.disabled) return;
   var titulo = document.getElementById('e-titulo').value.trim();
   var texto = document.getElementById('e-texto').value.trim();
-  var seccion = document.getElementById('e-sec').value;
   if(!titulo || !texto) { setStatus('Completa titulo y texto antes de publicar.', 'err'); return; }
 
   var token = getGithubToken();
   if(!token) { showModal(); setStatus('Ingresa tu token de GitHub para publicar en el sitio.', 'err'); return; }
+
+  document.getElementById('confirmar-titulo-preview').textContent = titulo;
+  var sel = document.getElementById('confirmar-sec');
+  sel.value = document.getElementById('e-sec').value;
+  sel.onchange = actualizarPreviewCategoria;
+  actualizarPreviewCategoria();
+  document.getElementById('modal-confirmar-publicar').style.display = 'flex';
+}
+
+function actualizarPreviewCategoria() {
+  var sec = document.getElementById('confirmar-sec').value;
+  var cat = SECCION_A_CATEGORIA[sec] || 'la-ciudad';
+  document.getElementById('confirmar-cat-preview').textContent = 'Va a aparecer en la solapa: ' + (CATEGORIA_LABELS[cat] || cat);
+}
+
+function confirmarYPublicar() {
+  document.getElementById('e-sec').value = document.getElementById('confirmar-sec').value;
+  document.getElementById('modal-confirmar-publicar').style.display = 'none';
+  ejecutarPublicacion();
+}
+
+function ejecutarPublicacion() {
+  var titulo = document.getElementById('e-titulo').value.trim();
+  var texto = document.getElementById('e-texto').value.trim();
+  var seccion = document.getElementById('e-sec').value;
 
   var esEdicion = !!notaEditando;
   var categoria = SECCION_A_CATEGORIA[seccion] || 'la-ciudad';
