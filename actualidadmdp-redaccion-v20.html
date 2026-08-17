@@ -271,6 +271,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
           <button type="button" class="mini-btn" onclick="document.getElementById('e-imagen-inline-file').click()">🖼 Imagen acá</button>
           <input id="e-imagen-inline-file" type="file" accept="image/*" multiple style="display:none" onchange="insertarImagenEnTexto(event)"/>
           <button type="button" class="mini-btn" onclick="distribuirImagenesAutomaticamente()">🪄 Distribuir imágenes</button>
+          <button type="button" class="mini-btn" onclick="insertarVideo()">🎬 Video acá</button>
           <span class="fotos-libres-hint" id="imagenes-inline-count" style="margin:0"></span>
         </div>
         <textarea class="fi fta" id="e-texto" placeholder="Seleccioná una noticia y presioná Generar con IA..." oninput="wc()"></textarea>
@@ -394,6 +395,41 @@ function procesarSiguienteEnCola() {
 var notaEditando = null;
 var imagenManualBase64 = null;
 var imagenesInline = [];
+
+function videoEmbedHtml(url) {
+  var yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+  if(yt) {
+    return '<div class="video-embed"><iframe src="https://www.youtube.com/embed/' + yt[1] + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  var ig = url.match(/instagram\.com\/(?:p|reel)\/([a-zA-Z0-9_-]+)/);
+  if(ig) {
+    return '<div class="video-embed"><iframe src="https://www.instagram.com/p/' + ig[1] + '/embed" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  if(/facebook\.com|fb\.watch/.test(url)) {
+    return '<div class="video-embed"><iframe src="https://www.facebook.com/plugins/video.php?href=' + encodeURIComponent(url) + '&show_text=false" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+  }
+  return '<p><a href="' + url + '" target="_blank" rel="noopener noreferrer">▶ Ver video</a></p>';
+}
+
+function insertarVideo() {
+  var url = prompt('Pega el link del video (YouTube, Facebook o Instagram):');
+  if(!url) return;
+  url = url.trim();
+  if(!/^https?:\/\//.test(url)) { setStatus('Ese no parece un link valido.', 'err'); return; }
+
+  var ta = document.getElementById('e-texto');
+  var pos = ta.selectionStart || ta.value.length;
+  var antes = ta.value.substring(0, pos);
+  var despues = ta.value.substring(pos);
+  var separador = (antes && !antes.endsWith('\n\n')) ? (antes.endsWith('\n') ? '\n' : '\n\n') : '';
+  var bloque = separador + videoEmbedHtml(url) + '\n\n';
+  ta.value = antes + bloque + despues;
+  ta.focus();
+  var nuevaPos = (antes + bloque).length;
+  ta.setSelectionRange(nuevaPos, nuevaPos);
+  wc();
+  setStatus('Video agregado a la nota.', 'ok');
+}
 
 function insertarSubtitulo() {
   var ta = document.getElementById('e-texto');
