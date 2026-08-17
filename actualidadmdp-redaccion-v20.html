@@ -148,6 +148,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">CLAVE UNSPLASH (para buscar fotos libres)</label>
     <input class="modal-input" id="unsplash-inp" type="password" placeholder="Access Key..."/>
     <div class="modal-hint">Creá una app gratis en <a href="https://unsplash.com/oauth/applications" target="_blank">unsplash.com/oauth/applications</a> y copiá el "Access Key". Opcional.</div>
+    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">ID DE PÁGINA DE FACEBOOK</label>
+    <input class="modal-input" id="fbpage-inp" type="text" placeholder="123456789012345"/>
+    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">TOKEN DE PÁGINA DE FACEBOOK (para publicar solo)</label>
+    <input class="modal-input" id="fbtoken-inp" type="password" placeholder="EAAG..."/>
+    <div class="modal-hint">Sacalo en <a href="https://developers.facebook.com/tools/explorer/" target="_blank">developers.facebook.com/tools/explorer</a>. Opcional: sin esto, la nota igual se publica en el sitio, solo no se comparte sola en Facebook.</div>
     <button class="modal-btn" id="btn-entrar" onclick="guardarKey()">Entrar al panel →</button>
     <div class="modal-err" id="api-err">Verificá las claves ingresadas.</div>
   </div>
@@ -168,6 +173,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
       <option value="mundo">🌎 Mundo</option>
     </select>
     <div class="modal-hint" id="confirmar-cat-preview" style="margin-top:6px"></div>
+    <label id="confirmar-fb-label" style="display:none;align-items:center;gap:8px;font-size:12px;color:#5a6472;margin-top:14px;cursor:pointer">
+      <input type="checkbox" id="confirmar-fb" checked/> Publicar también en la página de Facebook
+    </label>
     <button class="modal-btn" onclick="confirmarYPublicar()" style="margin-top:16px">Confirmar y publicar →</button>
     <button class="modal-btn" onclick="document.getElementById('modal-confirmar-publicar').style.display='none'" style="margin-top:8px;background:var(--border);color:var(--muted)">Cancelar</button>
   </div>
@@ -641,9 +649,13 @@ function guardarKey() {
   var g = document.getElementById('gemini-inp').value.trim();
   var gh = document.getElementById('github-inp').value.trim();
   var un = document.getElementById('unsplash-inp').value.trim();
+  var fbp = document.getElementById('fbpage-inp').value.trim();
+  var fbt = document.getElementById('fbtoken-inp').value.trim();
   if(g) localStorage.setItem('gemini_key', g);
   if(gh) localStorage.setItem('github_token', gh);
   if(un) localStorage.setItem('unsplash_key', un);
+  if(fbp) localStorage.setItem('fb_page_id', fbp);
+  if(fbt) localStorage.setItem('fb_page_token', fbt);
   if(!k.startsWith('sk-ant-')) {
     document.getElementById('api-err').style.display = 'block';
     document.getElementById('api-err').textContent = 'La clave de Anthropic debe empezar con sk-ant-';
@@ -656,12 +668,16 @@ function guardarKey() {
 function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
 function getGithubToken() { return localStorage.getItem('github_token') || ''; }
 function getUnsplashKey() { return localStorage.getItem('unsplash_key') || ''; }
+function getFacebookPageId() { return localStorage.getItem('fb_page_id') || ''; }
+function getFacebookToken() { return localStorage.getItem('fb_page_token') || ''; }
 
 function showModal() {
   document.getElementById('api-inp').value = getKey();
   document.getElementById('gemini-inp').value = getGeminiKey();
   document.getElementById('github-inp').value = getGithubToken();
   document.getElementById('unsplash-inp').value = getUnsplashKey();
+  document.getElementById('fbpage-inp').value = getFacebookPageId();
+  document.getElementById('fbtoken-inp').value = getFacebookToken();
   document.getElementById('modal-api').style.display = 'flex';
 }
 
@@ -1174,6 +1190,16 @@ function publicarEnSitio() {
   sel.value = document.getElementById('e-sec').value;
   sel.onchange = actualizarPreviewCategoria;
   actualizarPreviewCategoria();
+
+  var fbLabel = document.getElementById('confirmar-fb-label');
+  var esEdicionActual = !!notaEditando;
+  if(!esEdicionActual && getFacebookToken() && getFacebookPageId()) {
+    fbLabel.style.display = 'flex';
+    document.getElementById('confirmar-fb').checked = true;
+  } else {
+    fbLabel.style.display = 'none';
+  }
+
   document.getElementById('modal-confirmar-publicar').style.display = 'flex';
 }
 
@@ -1184,8 +1210,30 @@ function actualizarPreviewCategoria() {
 
 function confirmarYPublicar() {
   document.getElementById('e-sec').value = document.getElementById('confirmar-sec').value;
+  var fbLabel = document.getElementById('confirmar-fb-label');
+  window._publicarFbEsteVez = fbLabel.style.display !== 'none' && document.getElementById('confirmar-fb').checked;
   document.getElementById('modal-confirmar-publicar').style.display = 'none';
   ejecutarPublicacion();
+}
+
+function publicarEnFacebook(titulo, excerpt, urlNota) {
+  var token = getFacebookToken();
+  var pageId = getFacebookPageId();
+  if(!token || !pageId) return Promise.resolve(null);
+  var mensaje = titulo + (excerpt ? '\n\n' + excerpt : '');
+  var body = new URLSearchParams();
+  body.set('message', mensaje);
+  body.set('link', urlNota);
+  body.set('access_token', token);
+  return fetch('https://graph.facebook.com/v21.0/' + pageId + '/feed', {
+    method: 'POST',
+    body: body
+  }).then(function(r) {
+    return r.json().then(function(d) {
+      if(d.error) throw new Error(d.error.message);
+      return d;
+    });
+  });
 }
 
 function ejecutarPublicacion() {
@@ -1248,15 +1296,26 @@ function ejecutarPublicacion() {
       '---\n\n' + textoFinal + '\n';
     return githubPutFile(postPath, utf8ToBase64(frontmatter), (esEdicion ? 'Editar: ' : 'Publicar: ') + titulo, esEdicion ? notaEditando.sha : null);
   }).then(function() {
-    notaEditando = null;
-    document.querySelector('.layout').classList.remove('modo-edicion');
-    if(colaActiva) {
-      colaPos++;
-      setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + '). Pasando a la siguiente...', 'ok');
-      setTimeout(procesarSiguienteEnCola, 1200);
-    } else {
-      setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + '. El sitio se actualiza solo en 1-2 minutos: actualidad-mdp-web.merlojonatan1984.workers.dev/noticia/' + slug + '/', 'ok');
-    }
+    var urlNota = 'https://actualidadmdp.com.ar/noticia/' + slug + '/';
+    var debePublicarFb = !esEdicion && !!getFacebookToken() && !!getFacebookPageId() && window._publicarFbEsteVez !== false;
+
+    return (debePublicarFb ? publicarEnFacebook(titulo, excerpt, urlNota) : Promise.resolve(null))
+      .then(function() {
+        notaEditando = null;
+        document.querySelector('.layout').classList.remove('modo-edicion');
+        if(colaActiva) {
+          colaPos++;
+          setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + ')' + (debePublicarFb ? ' + Facebook' : '') + '. Pasando a la siguiente...', 'ok');
+          setTimeout(procesarSiguienteEnCola, 1200);
+        } else {
+          setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : ('Publicado' + (debePublicarFb ? ' y compartido en Facebook' : ''))) + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
+        }
+      })
+      .catch(function(e) {
+        notaEditando = null;
+        document.querySelector('.layout').classList.remove('modo-edicion');
+        setStatus('✓ Publicado en el sitio, pero falló Facebook: ' + e.message, 'err');
+      });
   }).catch(function(e) {
     setStatus('Error al publicar: ' + e.message, 'err');
   }).finally(function() {
