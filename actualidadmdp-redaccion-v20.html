@@ -411,17 +411,23 @@ function actualizarHoroscopo() {
     signos.map(function(s) { return s + ': [texto del horoscopo]'; }).join('\n');
 
   llamarIA(prompt).then(function(res) {
-    var lineas = res.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+    console.log('[horoscopo] respuesta cruda de la IA:', res);
+    var lineas = res.split('\n').map(function(l) {
+      return l.replace(/^[\s\-\*•\d\.\)]+/, '').replace(/\*\*/g, '').trim();
+    }).filter(Boolean);
     var nombresConTilde = { 'Geminis': 'Géminis', 'Cancer': 'Cáncer', 'Sagitario': 'Sagitario', 'Capricornio': 'Capricornio', 'Acuario': 'Acuario', 'Piscis': 'Piscis' };
     var nuevosSignos = [];
     lineas.forEach(function(linea) {
-      var m = linea.match(/^([A-Za-zÁÉÍÓÚáéíóú]+):\s*(.+)$/);
+      var m = linea.match(/^([A-Za-zÁÉÍÓÚáéíóúÑñ]+)\s*:\s*(.+)$/);
       if(!m) return;
       var nombre = m[1];
       var nombreFinal = nombresConTilde[nombre] || nombre;
       nuevosSignos.push({ signo: nombreFinal, texto: m[2].trim() });
     });
-    if(nuevosSignos.length < 10) throw new Error('La IA no devolvio los 12 signos, intenta de nuevo.');
+    if(nuevosSignos.length < 10) {
+      console.log('[horoscopo] lineas parseadas:', lineas, 'signos encontrados:', nuevosSignos);
+      throw new Error('La IA no devolvio los 12 signos en el formato esperado (revisa la consola del navegador con F12 para ver la respuesta). Intenta de nuevo.');
+    }
 
     var data = { updatedAt: new Date().toISOString().substring(0, 10), signos: nuevosSignos };
     return githubPutFileAuto('src/data/horoscopo.json', utf8ToBase64(JSON.stringify(data, null, 2)), 'Actualizar horoscopo del dia');
