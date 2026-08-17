@@ -736,7 +736,8 @@ function slugify(str) {
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s-]/g, '')
     .trim().replace(/\s+/g, '-').substring(0, 60);
-  return s + '-' + Date.now().toString(36).substring(4);
+  var azar = Math.random().toString(36).substring(2, 6);
+  return s + '-' + Date.now().toString(36) + azar;
 }
 
 function yamlEscape(str) {
@@ -872,6 +873,8 @@ function cargarNotaParaEditar(i) {
 }
 
 function publicarEnSitio() {
+  var btnCheck = document.querySelector('.btn-pub');
+  if(btnCheck && btnCheck.disabled) return;
   var titulo = document.getElementById('e-titulo').value.trim();
   var texto = document.getElementById('e-texto').value.trim();
   var seccion = document.getElementById('e-sec').value;
