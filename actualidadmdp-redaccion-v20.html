@@ -1068,15 +1068,24 @@ function verNotasPublicadas() {
   githubGetFile('src/content/posts').then(function(files) {
     var mdFiles = (Array.isArray(files) ? files : []).filter(function(f) { return f.name && f.name.indexOf('.md') === f.name.length - 3; });
     if(!mdFiles.length) return [];
-    return Promise.all(mdFiles.map(function(f) {
+    return Promise.allSettled(mdFiles.map(function(f) {
       return githubGetFile(f.path).then(function(data) {
         var contenido = base64ToUtf8(data.content);
         var titleMatch = contenido.match(/title:\s*"((?:[^"\\]|\\.)*)"/);
         return { path: f.path, sha: data.sha, titulo: titleMatch ? titleMatch[1].replace(/\\"/g, '"') : f.name, contenido: contenido };
       });
-    }));
-  }).then(function(notas) {
-    mostrarNotasPublicadas(notas);
+    })).then(function(resultados) {
+      var fallidas = resultados.filter(function(r) { return r.status === 'rejected'; });
+      if(fallidas.length) {
+        console.error('No se pudieron cargar ' + fallidas.length + ' nota(s):', fallidas.map(function(r) { return r.reason && r.reason.message; }));
+      }
+      return { notas: resultados.filter(function(r) { return r.status === 'fulfilled'; }).map(function(r) { return r.value; }), fallidas: fallidas.length };
+    });
+  }).then(function(resultado) {
+    mostrarNotasPublicadas(resultado.notas);
+    if(resultado.fallidas) {
+      setStatus('⚠️ No se pudieron cargar ' + resultado.fallidas + ' nota(s) (ver consola). Se muestran las demás.', 'err');
+    }
   }).catch(function(e) {
     setStatus('Error cargando notas publicadas: ' + e.message, 'err');
     document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-t">Error al cargar</div><div class="empty-s">' + e.message + '</div></div>';
