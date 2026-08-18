@@ -850,13 +850,17 @@ function llamarIA(prompt) {
   return fetch('https://rss-mdp.merlojonatan1984.workers.dev/ai', {
     method: 'POST',
     headers: {'Content-Type':'application/json','x-api-key':k,'anthropic-version':'2023-06-01'},
-    body: JSON.stringify({model:'claude-sonnet-5',max_tokens:1500,messages:[{role:'user',content:prompt}]})
+    body: JSON.stringify({model:'claude-sonnet-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
   }).then(function(r) { return r.json(); }).then(function(d) {
     if(d.error) {
       if(d.error.type === 'authentication_error') { localStorage.removeItem('mdp_key'); showModal(); }
       throw new Error(d.error.message);
     }
-    return (d.content || []).map(function(c) { return c.text || ''; }).join('');
+    var texto = (d.content || []).map(function(c) { return c.text || ''; }).join('');
+    if(d.stop_reason === 'max_tokens') {
+      texto += '\n\n⚠️ [EL TEXTO SE CORTÓ POR LARGO -- REVISALO ANTES DE PUBLICAR]';
+    }
+    return texto;
   });
 }
 
@@ -1495,15 +1499,20 @@ function ejecutarPublicacion() {
       var imagenSrcParaCanvas = imagenBase64 ? ('data:image/png;base64,' + imagenBase64) : imagenUrlAbsoluta;
       var captionFb = titulo + '\n\n' + urlNota;
       setTimeout(function() {
+        var fallo = false;
         crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt)
           .then(function(blob) {
             return publicarEnFacebook(blob, captionFb, true);
           })
           .catch(function(e) {
+            fallo = true;
+            console.error('No se pudo armar la plantilla, se publica la foto sin marco:', e);
             return publicarEnFacebook(imagenUrlAbsoluta, captionFb, false);
           })
           .then(function() {
-            setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
+            setStatus(fallo
+              ? '✓ Compartido en Facebook SIN la plantilla (falló al armarla, revisá la consola): ' + titulo
+              : '✓ Compartido en Facebook: ' + titulo, fallo ? 'err' : 'ok');
           })
           .catch(function(e) {
             setStatus('Error al compartir en Facebook "' + titulo + '": ' + e.message, 'err');
