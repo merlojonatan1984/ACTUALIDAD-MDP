@@ -176,9 +176,6 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <label id="confirmar-fb-label" style="display:none;align-items:center;gap:8px;font-size:12px;color:#5a6472;margin-top:14px;cursor:pointer">
       <input type="checkbox" id="confirmar-fb" checked onchange="actualizarPreviewFacebook()"/> Publicar también en la página de Facebook
     </label>
-    <label id="confirmar-urgente-label" style="display:none;align-items:center;gap:8px;font-size:12px;color:#5a6472;margin-top:8px;cursor:pointer">
-      <input type="checkbox" id="confirmar-urgente" onchange="actualizarPreviewFacebook()"/> Marcar como "URGENTE" en la imagen de Facebook
-    </label>
     <div id="confirmar-fb-preview" style="display:none;margin-top:12px">
       <div class="modal-hint" style="margin-bottom:6px">Así se va a ver la imagen en Facebook:</div>
       <img id="confirmar-fb-preview-img" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block"/>
@@ -1199,16 +1196,12 @@ function publicarEnSitio() {
   actualizarPreviewCategoria();
 
   var fbLabel = document.getElementById('confirmar-fb-label');
-  var urgenteLabel = document.getElementById('confirmar-urgente-label');
   var esEdicionActual = !!notaEditando;
   if(!esEdicionActual && getFacebookToken() && getFacebookPageId()) {
     fbLabel.style.display = 'flex';
     document.getElementById('confirmar-fb').checked = true;
-    urgenteLabel.style.display = 'flex';
-    document.getElementById('confirmar-urgente').checked = false;
   } else {
     fbLabel.style.display = 'none';
-    urgenteLabel.style.display = 'none';
   }
   actualizarPreviewFacebook();
 
@@ -1228,7 +1221,6 @@ function actualizarPreviewFacebook() {
   var titulo = document.getElementById('e-titulo').value.trim();
   var texto = document.getElementById('e-texto').value.trim();
   var excerpt = texto.replace(/\s+/g, ' ').trim().substring(0, 200);
-  var urgente = document.getElementById('confirmar-urgente').checked;
 
   var imgEl = document.getElementById('img-result');
   var tieneImagenIA = imgEl && imgEl.src && imgEl.src.indexOf('data:image') === 0;
@@ -1237,7 +1229,7 @@ function actualizarPreviewFacebook() {
 
   previewBox.style.display = 'block';
   var previewImg = document.getElementById('confirmar-fb-preview-img');
-  crearImagenFacebook('data:image/png;base64,' + imagenBase64, titulo, excerpt, urgente).then(function(blob) {
+  crearImagenFacebook('data:image/png;base64,' + imagenBase64, titulo, excerpt).then(function(blob) {
     previewImg.src = URL.createObjectURL(blob);
   }).catch(function() {
     previewBox.style.display = 'none';
@@ -1248,7 +1240,6 @@ function confirmarYPublicar() {
   document.getElementById('e-sec').value = document.getElementById('confirmar-sec').value;
   var fbLabel = document.getElementById('confirmar-fb-label');
   window._publicarFbEsteVez = fbLabel.style.display !== 'none' && document.getElementById('confirmar-fb').checked;
-  window._urgenteEsteVez = document.getElementById('confirmar-urgente').checked;
   document.getElementById('modal-confirmar-publicar').style.display = 'none';
   ejecutarPublicacion();
 }
@@ -1348,7 +1339,7 @@ function ajustarTitulo(ctx, titulo, maxAncho, maxLineas) {
   }
 }
 
-function crearImagenFacebook(imagenSrc, titulo, excerpt, urgente) {
+function crearImagenFacebook(imagenSrc, titulo, excerpt) {
   return Promise.all([
     document.fonts.load('800 42px "Source Sans 3"'),
     document.fonts.load('600 26px "Source Sans 3"')
@@ -1383,20 +1374,6 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt, urgente) {
           ctx.font = '800 32px "Source Sans 3"';
           ctx.textAlign = 'center';
           ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 11);
-
-          if(urgente) {
-            ctx.save();
-            ctx.translate(S - 60, 150);
-            ctx.rotate(Math.PI / 4);
-            ctx.fillStyle = '#f5c518';
-            ctx.fillRect(-300, -34, 600, 68);
-            ctx.fillStyle = '#1a1a1a';
-            ctx.font = '800 34px "Source Sans 3"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('URGENTE', 0, 2);
-            ctx.restore();
-          }
 
           var ix = 70, iy = 155, iw = S - 140, ih = 620;
           ctx.save();
@@ -1516,10 +1493,9 @@ function ejecutarPublicacion() {
       // avisarle a Facebook, para que la imagen ya este disponible en esa URL.
       var imagenUrlAbsoluta = 'https://actualidadmdp.com.ar' + imagenFinal;
       var imagenSrcParaCanvas = imagenBase64 ? ('data:image/png;base64,' + imagenBase64) : imagenUrlAbsoluta;
-      var esUrgente = !!window._urgenteEsteVez;
       var captionFb = titulo + '\n\n' + urlNota;
       setTimeout(function() {
-        crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt, esUrgente)
+        crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt)
           .then(function(blob) {
             return publicarEnFacebook(blob, captionFb, true);
           })
