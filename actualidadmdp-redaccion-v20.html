@@ -174,8 +174,15 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     </select>
     <div class="modal-hint" id="confirmar-cat-preview" style="margin-top:6px"></div>
     <label id="confirmar-fb-label" style="display:none;align-items:center;gap:8px;font-size:12px;color:#5a6472;margin-top:14px;cursor:pointer">
-      <input type="checkbox" id="confirmar-fb" checked/> Publicar también en la página de Facebook
+      <input type="checkbox" id="confirmar-fb" checked onchange="actualizarPreviewFacebook()"/> Publicar también en la página de Facebook
     </label>
+    <label id="confirmar-urgente-label" style="display:none;align-items:center;gap:8px;font-size:12px;color:#5a6472;margin-top:8px;cursor:pointer">
+      <input type="checkbox" id="confirmar-urgente" onchange="actualizarPreviewFacebook()"/> Marcar como "URGENTE" en la imagen de Facebook
+    </label>
+    <div id="confirmar-fb-preview" style="display:none;margin-top:12px">
+      <div class="modal-hint" style="margin-bottom:6px">Así se va a ver la imagen en Facebook:</div>
+      <img id="confirmar-fb-preview-img" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block"/>
+    </div>
     <button class="modal-btn" onclick="confirmarYPublicar()" style="margin-top:16px">Confirmar y publicar →</button>
     <button class="modal-btn" onclick="document.getElementById('modal-confirmar-publicar').style.display='none'" style="margin-top:8px;background:var(--border);color:var(--muted)">Cancelar</button>
   </div>
@@ -1192,13 +1199,18 @@ function publicarEnSitio() {
   actualizarPreviewCategoria();
 
   var fbLabel = document.getElementById('confirmar-fb-label');
+  var urgenteLabel = document.getElementById('confirmar-urgente-label');
   var esEdicionActual = !!notaEditando;
   if(!esEdicionActual && getFacebookToken() && getFacebookPageId()) {
     fbLabel.style.display = 'flex';
     document.getElementById('confirmar-fb').checked = true;
+    urgenteLabel.style.display = 'flex';
+    document.getElementById('confirmar-urgente').checked = false;
   } else {
     fbLabel.style.display = 'none';
+    urgenteLabel.style.display = 'none';
   }
+  actualizarPreviewFacebook();
 
   document.getElementById('modal-confirmar-publicar').style.display = 'flex';
 }
@@ -1208,33 +1220,230 @@ function actualizarPreviewCategoria() {
   document.getElementById('confirmar-cat-preview').textContent = 'Va a aparecer en la solapa: ' + (CATEGORIA_LABELS[cat] || cat);
 }
 
+function actualizarPreviewFacebook() {
+  var fbLabel = document.getElementById('confirmar-fb-label');
+  var previewBox = document.getElementById('confirmar-fb-preview');
+  if(fbLabel.style.display === 'none' || !document.getElementById('confirmar-fb').checked) { previewBox.style.display = 'none'; return; }
+
+  var titulo = document.getElementById('e-titulo').value.trim();
+  var texto = document.getElementById('e-texto').value.trim();
+  var excerpt = texto.replace(/\s+/g, ' ').trim().substring(0, 200);
+  var urgente = document.getElementById('confirmar-urgente').checked;
+
+  var imgEl = document.getElementById('img-result');
+  var tieneImagenIA = imgEl && imgEl.src && imgEl.src.indexOf('data:image') === 0;
+  var imagenBase64 = imagenManualBase64 || (tieneImagenIA ? imgEl.src.split(',')[1] : null);
+  if(!imagenBase64) { previewBox.style.display = 'none'; return; }
+
+  previewBox.style.display = 'block';
+  var previewImg = document.getElementById('confirmar-fb-preview-img');
+  crearImagenFacebook('data:image/png;base64,' + imagenBase64, titulo, excerpt, urgente).then(function(blob) {
+    previewImg.src = URL.createObjectURL(blob);
+  }).catch(function() {
+    previewBox.style.display = 'none';
+  });
+}
+
 function confirmarYPublicar() {
   document.getElementById('e-sec').value = document.getElementById('confirmar-sec').value;
   var fbLabel = document.getElementById('confirmar-fb-label');
   window._publicarFbEsteVez = fbLabel.style.display !== 'none' && document.getElementById('confirmar-fb').checked;
+  window._urgenteEsteVez = document.getElementById('confirmar-urgente').checked;
   document.getElementById('modal-confirmar-publicar').style.display = 'none';
   ejecutarPublicacion();
 }
 
-function publicarEnFacebook(titulo, excerpt, imagenUrl, urlNota) {
+function publicarEnFacebook(fuente, caption, esBlob) {
   var token = getFacebookToken();
   var pageId = getFacebookPageId();
   if(!token || !pageId) return Promise.resolve(null);
-  // Se sube como foto (no como /feed con link) porque Facebook ya no
-  // genera la vista previa con imagen de forma confiable para posts
-  // creados via API -- subiendo la foto directo, la imagen sale si o si.
-  var caption = titulo + (excerpt ? '\n\n' + excerpt : '') + '\n\n' + urlNota;
-  var body = new URLSearchParams();
-  body.set('url', imagenUrl);
-  body.set('caption', caption);
-  body.set('access_token', token);
-  return fetch('https://graph.facebook.com/v21.0/' + pageId + '/photos', {
-    method: 'POST',
-    body: body
-  }).then(function(r) {
+  var url = 'https://graph.facebook.com/v21.0/' + pageId + '/photos';
+  var opciones;
+  if(esBlob) {
+    var formData = new FormData();
+    formData.append('source', fuente, 'facebook.jpg');
+    formData.append('caption', caption);
+    formData.append('access_token', token);
+    opciones = { method: 'POST', body: formData };
+  } else {
+    var body = new URLSearchParams();
+    body.set('url', fuente);
+    body.set('caption', caption);
+    body.set('access_token', token);
+    opciones = { method: 'POST', body: body };
+  }
+  return fetch(url, opciones).then(function(r) {
     return r.json().then(function(d) {
       if(d.error) throw new Error(d.error.message);
       return d;
+    });
+  });
+}
+
+function rectRedondeado(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function dibujarImagenCover(ctx, img, x, y, w, h) {
+  var ir = img.width / img.height, tr = w / h, sx, sy, sw, sh;
+  if(ir > tr) {
+    sh = img.height;
+    sw = sh * tr;
+    sx = (img.width - sw) / 2;
+    sy = 0;
+  } else {
+    sw = img.width;
+    sh = sw / tr;
+    sx = 0;
+    sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+function envolverTexto(ctx, texto, maxAncho, maxLineas) {
+  var palabras = texto.split(/\s+/).filter(Boolean);
+  var lineas = [];
+  var actual = '';
+  var idx = 0;
+  while(idx < palabras.length && lineas.length < maxLineas) {
+    var prueba = actual ? actual + ' ' + palabras[idx] : palabras[idx];
+    if(ctx.measureText(prueba).width <= maxAncho) {
+      actual = prueba;
+      idx++;
+    } else if(!actual) {
+      actual = palabras[idx];
+      idx++;
+    } else {
+      lineas.push(actual);
+      actual = '';
+    }
+  }
+  if(actual && lineas.length < maxLineas) { lineas.push(actual); idx = idx; }
+  var truncado = idx < palabras.length;
+  if(truncado && lineas.length) {
+    var ultima = lineas[lineas.length - 1];
+    while(ctx.measureText(ultima + '…').width > maxAncho && ultima.length > 1) {
+      ultima = ultima.slice(0, -1).trim();
+    }
+    lineas[lineas.length - 1] = ultima + '…';
+  }
+  return lineas;
+}
+
+function ajustarTitulo(ctx, titulo, maxAncho, maxLineas) {
+  var tamanos = [56, 48, 42, 36];
+  for(var i = 0; i < tamanos.length; i++) {
+    ctx.font = '800 ' + tamanos[i] + 'px "Source Sans 3"';
+    var lineas = envolverTexto(ctx, titulo, maxAncho, maxLineas);
+    var ultima = lineas[lineas.length - 1] || '';
+    if(i === tamanos.length - 1 || ultima.indexOf('…') === -1) {
+      return { fontSize: tamanos[i], lineas: lineas };
+    }
+  }
+}
+
+function crearImagenFacebook(imagenSrc, titulo, excerpt, urgente) {
+  return Promise.all([
+    document.fonts.load('800 42px "Source Sans 3"'),
+    document.fonts.load('600 26px "Source Sans 3"')
+  ]).catch(function() {}).then(function() {
+    return new Promise(function(resolve, reject) {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        try {
+          var S = 1080;
+          var canvas = document.createElement('canvas');
+          canvas.width = S; canvas.height = S;
+          var ctx = canvas.getContext('2d');
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, S, S);
+          ctx.fillStyle = '#0d2340';
+          ctx.fillRect(0, 0, S, 800);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '800 42px "Source Sans 3"';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText('ACTUALIDAD', 60, 90);
+          var anchoActualidad = ctx.measureText('ACTUALIDAD').width;
+
+          var bubbleX = 60 + anchoActualidad + 14, bubbleY = 55, bubbleW = 130, bubbleH = 50;
+          ctx.fillStyle = '#4fa8d8';
+          rectRedondeado(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 10);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '800 32px "Source Sans 3"';
+          ctx.textAlign = 'center';
+          ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 11);
+
+          if(urgente) {
+            ctx.save();
+            ctx.translate(S - 60, 150);
+            ctx.rotate(Math.PI / 4);
+            ctx.fillStyle = '#f5c518';
+            ctx.fillRect(-300, -34, 600, 68);
+            ctx.fillStyle = '#1a1a1a';
+            ctx.font = '800 34px "Source Sans 3"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('URGENTE', 0, 2);
+            ctx.restore();
+          }
+
+          var ix = 70, iy = 155, iw = S - 140, ih = 620;
+          ctx.save();
+          rectRedondeado(ctx, ix, iy, iw, ih, 18);
+          ctx.clip();
+          dibujarImagenCover(ctx, img, ix, iy, iw, ih);
+          ctx.restore();
+
+          var cx = 70, cy = 700, cw = S - 140, ch = 330;
+          ctx.save();
+          ctx.shadowColor = 'rgba(0,0,0,0.25)';
+          ctx.shadowBlur = 30;
+          ctx.shadowOffsetY = 8;
+          ctx.fillStyle = '#ffffff';
+          rectRedondeado(ctx, cx, cy, cw, ch, 16);
+          ctx.fill();
+          ctx.restore();
+
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillStyle = '#374151';
+          var resultadoTitulo = ajustarTitulo(ctx, titulo, cw - 80, 3);
+          ctx.font = '800 ' + resultadoTitulo.fontSize + 'px "Source Sans 3"';
+          var ty = cy + 56;
+          resultadoTitulo.lineas.forEach(function(linea) {
+            ctx.fillText(linea, cx + 40, ty);
+            ty += resultadoTitulo.fontSize + 10;
+          });
+
+          if(excerpt) {
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '600 26px "Source Sans 3"';
+            var lineasBajada = envolverTexto(ctx, excerpt, cw - 80, 2);
+            ty += 12;
+            lineasBajada.forEach(function(linea) {
+              ctx.fillText(linea, cx + 40, ty);
+              ty += 34;
+            });
+          }
+
+          canvas.toBlob(function(blob) {
+            if(blob) resolve(blob); else reject(new Error('No se pudo generar la imagen de Facebook'));
+          }, 'image/jpeg', 0.92);
+        } catch(e) { reject(e); }
+      };
+      img.onerror = function() { reject(new Error('No se pudo cargar la imagen para armar la plantilla')); };
+      img.src = imagenSrc;
     });
   });
 }
@@ -1306,12 +1515,23 @@ function ejecutarPublicacion() {
       // Se espera a que Cloudflare termine de desplegar el sitio antes de
       // avisarle a Facebook, para que la imagen ya este disponible en esa URL.
       var imagenUrlAbsoluta = 'https://actualidadmdp.com.ar' + imagenFinal;
+      var imagenSrcParaCanvas = imagenBase64 ? ('data:image/png;base64,' + imagenBase64) : imagenUrlAbsoluta;
+      var esUrgente = !!window._urgenteEsteVez;
+      var captionFb = titulo + '\n\n' + urlNota;
       setTimeout(function() {
-        publicarEnFacebook(titulo, excerpt, imagenUrlAbsoluta, urlNota).then(function() {
-          setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
-        }).catch(function(e) {
-          setStatus('Error al compartir en Facebook "' + titulo + '": ' + e.message, 'err');
-        });
+        crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt, esUrgente)
+          .then(function(blob) {
+            return publicarEnFacebook(blob, captionFb, true);
+          })
+          .catch(function(e) {
+            return publicarEnFacebook(imagenUrlAbsoluta, captionFb, false);
+          })
+          .then(function() {
+            setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
+          })
+          .catch(function(e) {
+            setStatus('Error al compartir en Facebook "' + titulo + '": ' + e.message, 'err');
+          });
       }, 120000);
     }
 
