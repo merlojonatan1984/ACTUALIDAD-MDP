@@ -153,6 +153,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">TOKEN DE PÁGINA DE FACEBOOK (para publicar solo)</label>
     <input class="modal-input" id="fbtoken-inp" type="password" placeholder="EAAG..."/>
     <div class="modal-hint">Sacalo en <a href="https://developers.facebook.com/tools/explorer/" target="_blank">developers.facebook.com/tools/explorer</a>. Opcional: sin esto, la nota igual se publica en el sitio, solo no se comparte sola en Facebook.</div>
+    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">ID DE CUENTA DE INSTAGRAM BUSINESS</label>
+    <input class="modal-input" id="igid-inp" type="text" placeholder="178414..."/>
+    <div class="modal-hint">La cuenta tiene que ser Business y estar conectada a la página de Facebook. Usa el mismo token de arriba (con permisos instagram_basic e instagram_content_publish agregados). Opcional.</div>
     <button class="modal-btn" id="btn-entrar" onclick="guardarKey()">Entrar al panel →</button>
     <div class="modal-err" id="api-err">Verificá las claves ingresadas.</div>
   </div>
@@ -174,10 +177,10 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     </select>
     <div class="modal-hint" id="confirmar-cat-preview" style="margin-top:6px"></div>
     <label id="confirmar-fb-label" style="display:none;align-items:center;gap:8px;font-size:12px;color:#5a6472;margin-top:14px;cursor:pointer">
-      <input type="checkbox" id="confirmar-fb" checked onchange="actualizarPreviewFacebook()"/> Publicar también en la página de Facebook
+      <input type="checkbox" id="confirmar-fb" checked onchange="actualizarPreviewFacebook()"/> <span id="confirmar-fb-label-texto">Publicar también en Facebook</span>
     </label>
     <div id="confirmar-fb-preview" style="display:none;margin-top:12px">
-      <div class="modal-hint" style="margin-bottom:6px">Así se va a ver la imagen en Facebook:</div>
+      <div class="modal-hint" style="margin-bottom:6px">Así se va a ver la imagen:</div>
       <img id="confirmar-fb-preview-img" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block"/>
     </div>
     <button class="modal-btn" onclick="confirmarYPublicar()" style="margin-top:16px">Confirmar y publicar →</button>
@@ -655,11 +658,13 @@ function guardarKey() {
   var un = document.getElementById('unsplash-inp').value.trim();
   var fbp = document.getElementById('fbpage-inp').value.trim();
   var fbt = document.getElementById('fbtoken-inp').value.trim();
+  var igi = document.getElementById('igid-inp').value.trim();
   if(g) localStorage.setItem('gemini_key', g);
   if(gh) localStorage.setItem('github_token', gh);
   if(un) localStorage.setItem('unsplash_key', un);
   if(fbp) localStorage.setItem('fb_page_id', fbp);
   if(fbt) localStorage.setItem('fb_page_token', fbt);
+  if(igi) localStorage.setItem('ig_user_id', igi);
   if(!k.startsWith('sk-ant-')) {
     document.getElementById('api-err').style.display = 'block';
     document.getElementById('api-err').textContent = 'La clave de Anthropic debe empezar con sk-ant-';
@@ -674,6 +679,7 @@ function getGithubToken() { return localStorage.getItem('github_token') || ''; }
 function getUnsplashKey() { return localStorage.getItem('unsplash_key') || ''; }
 function getFacebookPageId() { return localStorage.getItem('fb_page_id') || ''; }
 function getFacebookToken() { return localStorage.getItem('fb_page_token') || ''; }
+function getInstagramUserId() { return localStorage.getItem('ig_user_id') || ''; }
 
 function showModal() {
   document.getElementById('api-inp').value = getKey();
@@ -682,6 +688,7 @@ function showModal() {
   document.getElementById('unsplash-inp').value = getUnsplashKey();
   document.getElementById('fbpage-inp').value = getFacebookPageId();
   document.getElementById('fbtoken-inp').value = getFacebookToken();
+  document.getElementById('igid-inp').value = getInstagramUserId();
   document.getElementById('modal-api').style.display = 'flex';
 }
 
@@ -1210,9 +1217,13 @@ function publicarEnSitio() {
 
   var fbLabel = document.getElementById('confirmar-fb-label');
   var esEdicionActual = !!notaEditando;
-  if(!esEdicionActual && getFacebookToken() && getFacebookPageId()) {
+  var hayFb = getFacebookToken() && getFacebookPageId();
+  var hayIg = getFacebookToken() && getInstagramUserId();
+  if(!esEdicionActual && (hayFb || hayIg)) {
     fbLabel.style.display = 'flex';
     document.getElementById('confirmar-fb').checked = true;
+    var redesTexto = [hayFb ? 'Facebook' : null, hayIg ? 'Instagram' : null].filter(Boolean).join(' y ');
+    document.getElementById('confirmar-fb-label-texto').textContent = 'Publicar también en ' + redesTexto;
   } else {
     fbLabel.style.display = 'none';
   }
@@ -1281,6 +1292,53 @@ function publicarEnFacebook(fuente, caption, esBlob) {
       if(d.error) throw new Error(d.error.message);
       return d;
     });
+  });
+}
+
+function blobToBase64(blob) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onloadend = function() { resolve(reader.result.split(',')[1]); };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+function esperar(ms) {
+  return new Promise(function(resolve) { setTimeout(resolve, ms); });
+}
+
+function publicarEnInstagram(blob, caption, slug) {
+  var token = getFacebookToken();
+  var igId = getInstagramUserId();
+  if(!token || !igId) return Promise.resolve(null);
+
+  // Instagram no acepta subir el archivo directo (a diferencia de Facebook):
+  // solo toma una URL publica. Asi que primero subimos la imagen al repo
+  // del sitio, y recien con esa URL publica creamos el contenedor.
+  var path = 'images/' + slug + '-ig.jpg';
+  return blobToBase64(blob).then(function(base64) {
+    return githubPutFileAuto('public/' + path, base64, 'Agregar imagen Instagram: ' + slug);
+  }).then(function() {
+    // Instagram va a intentar descargar esta URL apenas la pidamos --
+    // esperamos a que Cloudflare la despliegue, si no falla la creacion.
+    return esperar(90000);
+  }).then(function() {
+    var imagenUrl = 'https://actualidadmdp.com.ar/' + path;
+    var body = new URLSearchParams();
+    body.set('image_url', imagenUrl);
+    body.set('caption', caption);
+    body.set('access_token', token);
+    return fetch('https://graph.facebook.com/v21.0/' + igId + '/media', { method: 'POST', body: body });
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if(d.error) throw new Error(d.error.message);
+    var body2 = new URLSearchParams();
+    body2.set('creation_id', d.id);
+    body2.set('access_token', token);
+    return fetch('https://graph.facebook.com/v21.0/' + igId + '/media_publish', { method: 'POST', body: body2 });
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if(d.error) throw new Error(d.error.message);
+    return d;
   });
 }
 
@@ -1500,43 +1558,60 @@ function ejecutarPublicacion() {
   }).then(function() {
     var urlNota = 'https://actualidadmdp.com.ar/noticia/' + slug + '/';
     var debePublicarFb = !esEdicion && !!getFacebookToken() && !!getFacebookPageId() && window._publicarFbEsteVez !== false;
+    var debePublicarIg = !esEdicion && !!getFacebookToken() && !!getInstagramUserId() && window._publicarFbEsteVez !== false;
 
-    if(debePublicarFb) {
+    if(debePublicarFb || debePublicarIg) {
       // Se espera a que Cloudflare termine de desplegar el sitio antes de
-      // avisarle a Facebook, para que la imagen ya este disponible en esa URL.
+      // avisarle a Facebook/Instagram, para que la imagen ya este disponible en esa URL.
       var imagenUrlAbsoluta = 'https://actualidadmdp.com.ar' + imagenFinal;
       var imagenSrcParaCanvas = imagenBase64 ? ('data:image/png;base64,' + imagenBase64) : imagenUrlAbsoluta;
       var captionFb = titulo + '\n\n' + urlNota;
       setTimeout(function() {
-        var fallo = false;
-        crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt)
-          .then(function(blob) {
-            return publicarEnFacebook(blob, captionFb, true);
-          })
-          .catch(function(e) {
-            fallo = true;
-            console.error('No se pudo armar la plantilla, se publica la foto sin marco:', e);
-            return publicarEnFacebook(imagenUrlAbsoluta, captionFb, false);
-          })
-          .then(function() {
-            setStatus(fallo
-              ? '✓ Compartido en Facebook SIN la plantilla (falló al armarla, revisá la consola): ' + titulo
-              : '✓ Compartido en Facebook: ' + titulo, fallo ? 'err' : 'ok');
-          })
-          .catch(function(e) {
-            setStatus('Error al compartir en Facebook "' + titulo + '": ' + e.message, 'err');
-          });
+        crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt).then(function(blob) {
+          if(debePublicarFb) {
+            publicarEnFacebook(blob, captionFb, true).then(function() {
+              setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
+            }).catch(function(e) {
+              console.error('No se pudo armar la plantilla, se publica la foto sin marco:', e);
+              publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
+                setStatus('✓ Compartido en Facebook SIN la plantilla (revisá la consola): ' + titulo, 'err');
+              }).catch(function(e2) {
+                setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
+              });
+            });
+          }
+          if(debePublicarIg) {
+            publicarEnInstagram(blob, captionFb, slug).then(function() {
+              setStatus('✓ Compartido en Instagram: ' + titulo, 'ok');
+            }).catch(function(e) {
+              setStatus('Error al compartir en Instagram "' + titulo + '": ' + e.message, 'err');
+            });
+          }
+        }).catch(function(e) {
+          if(debePublicarFb) {
+            publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
+              setStatus('✓ Compartido en Facebook SIN la plantilla (revisá la consola): ' + titulo, 'err');
+              console.error('No se pudo armar la plantilla:', e);
+            }).catch(function(e2) {
+              setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
+            });
+          }
+          if(debePublicarIg) {
+            setStatus('No se pudo compartir en Instagram (falló al armar la plantilla) "' + titulo + '": ' + e.message, 'err');
+          }
+        });
       }, 120000);
     }
 
     notaEditando = null;
     document.querySelector('.layout').classList.remove('modo-edicion');
+    var redes = [debePublicarFb ? 'Facebook' : null, debePublicarIg ? 'Instagram' : null].filter(Boolean).join(' + ');
     if(colaActiva) {
       colaPos++;
-      setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + ')' + (debePublicarFb ? ' (Facebook en 2 min)' : '') + '. Pasando a la siguiente...', 'ok');
+      setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + ')' + (redes ? ' (' + redes + ' en 2 min)' : '') + '. Pasando a la siguiente...', 'ok');
       setTimeout(procesarSiguienteEnCola, 1200);
     } else {
-      setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + (debePublicarFb ? '. Se comparte en Facebook en 2 minutos' : '') + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
+      setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + (redes ? '. Se comparte en ' + redes + ' en 2 minutos' : '') + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
     }
   }).catch(function(e) {
     setStatus('Error al publicar: ' + e.message, 'err');
