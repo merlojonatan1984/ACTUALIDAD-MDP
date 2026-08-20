@@ -25,6 +25,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .mb.nac:hover,.mb.nac.on{background:#f59e0b;color:#fff;border-color:#f59e0b}
 .mb.inter{color:#6ee7b7;border-color:#6ee7b730}
 .mb.inter:hover,.mb.inter.on{background:#059669;color:#fff;border-color:#059669}
+.mb.provincia{color:#7dd3fc;border-color:#7dd3fc30}
+.mb.provincia:hover,.mb.provincia.on{background:#0284c7;color:#fff;border-color:#0284c7}
 .sep{color:rgba(255,255,255,0.15);margin:0 3px}
 .toolbar{background:var(--white);padding:7px 12px;border-bottom:1px solid var(--border);display:flex;gap:7px;align-items:center;flex-shrink:0}
 .search{flex:1;border:1.5px solid var(--border);border-radius:5px;padding:6px 10px;font-size:12px;font-family:'Source Sans 3',sans-serif;outline:none}
@@ -203,6 +205,10 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <span class="mb" onclick="setMedio('ahoramdp',this)">Ahora MDP</span>
   <span class="mb" onclick="setMedio('puntonoticias',this)">Punto Noticias</span>
   <span class="mb" onclick="setMedio('elmarplatense',this)">El Marplatense</span>
+  <span class="mb" onclick="setMedio('quedigital',this)">Qué Digital</span>
+  <span class="sep">|</span>
+  <span class="mb provincia" onclick="setMedio('eldia',this)">El Día (La Plata)</span>
+  <span class="mb provincia" onclick="setMedio('0221',this)">0221 (La Plata)</span>
   <span class="sep">|</span>
   <span class="mb nac" onclick="setMedio('clarin',this)">Clarín</span>
   <span class="mb nac" onclick="setMedio('lanacion',this)">La Nación</span>
@@ -323,7 +329,10 @@ var MEDIOS = {
   'lanacion':    {n:'La Nacion',      t:'nacional', url:'https://www.lanacion.com.ar',     rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.lanacion.com.ar/arc/outboundfeeds/rss/'},
   'bbc':         {n:'BBC Mundo',      t:'inter',    url:'https://www.bbc.com/mundo',       rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.bbci.co.uk/mundo/rss.xml'},
   'elpais':      {n:'El Pais',        t:'inter',    url:'https://elpais.com',              rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada'},
-  'elmarplatense':{n:'El Marplatense', t:'local',   url:'https://www.elmarplatense.com',   rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://elmarplatenseapiv3.eleco.com.ar/feed-notes'}
+  'elmarplatense':{n:'El Marplatense', t:'local',   url:'https://www.elmarplatense.com',   rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://elmarplatenseapiv3.eleco.com.ar/feed-notes'},
+  'quedigital':  {n:'Que Digital',    t:'local',    url:'https://quedigital.com.ar',       rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://quedigital.com.ar/feed/'},
+  'eldia':       {n:'El Dia',         t:'provincia', url:'https://www.eldia.com',           rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.eldia.com/feed'},
+  '0221':        {n:'0221',           t:'provincia', url:'https://www.0221.com.ar',         rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.0221.com.ar/rss/pages/ultimas-noticias.xml'}
 };
 
 var GITHUB_OWNER = 'merlojonatan1984';
