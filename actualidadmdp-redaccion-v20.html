@@ -1010,6 +1010,22 @@ function yamlEscape(str) {
   return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+// Recorta un texto sin dejarlo cortado a mitad de palabra ni de oracion.
+// Si dentro del limite entra un punto final razonable, cierra ahi mismo
+// (resumen completo, sin puntos suspensivos). Si no, corta en la ultima
+// palabra entera y agrega "…" para dejar claro que sigue.
+function resumirTexto(texto, maxLen) {
+  var limpio = texto.replace(/\s+/g, ' ').trim();
+  if (limpio.length <= maxLen) return limpio;
+  var corte = limpio.substring(0, maxLen);
+  var ultimoPunto = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('.\n'));
+  if (ultimoPunto > maxLen * 0.4) {
+    return corte.substring(0, ultimoPunto + 1).trim();
+  }
+  var ultimoEspacio = corte.lastIndexOf(' ');
+  return corte.substring(0, ultimoEspacio > 0 ? ultimoEspacio : maxLen).trim() + '…';
+}
+
 function utf8ToBase64(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
@@ -1253,7 +1269,7 @@ function actualizarPreviewFacebook() {
 
   var titulo = document.getElementById('e-titulo').value.trim();
   var texto = document.getElementById('e-texto').value.trim();
-  var excerpt = texto.replace(/\s+/g, ' ').trim().substring(0, 200);
+  var excerpt = resumirTexto(texto, 200);
 
   var imgEl = document.getElementById('img-result');
   var tieneImagenIA = imgEl && imgEl.src && imgEl.src.indexOf('data:image') === 0;
@@ -1514,7 +1530,7 @@ function ejecutarPublicacion() {
   var categoria = seccion || 'la-ciudad';
   var slug = esEdicion ? notaEditando.slug : slugify(titulo);
   var postPath = esEdicion ? notaEditando.path : ('src/content/posts/' + slug + '.md');
-  var excerpt = texto.replace(/\s+/g, ' ').trim().substring(0, 200);
+  var excerpt = resumirTexto(texto, 200);
   var fecha = (esEdicion && notaEditando.fecha) ? notaEditando.fecha : new Date().toISOString().substring(0, 10);
 
   var btn = document.querySelector('.btn-pub');
