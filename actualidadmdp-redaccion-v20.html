@@ -1574,7 +1574,7 @@ function ejecutarPublicacion() {
       // avisarle a Facebook/Instagram, para que la imagen ya este disponible en esa URL.
       var imagenUrlAbsoluta = 'https://actualidadmdp.com.ar' + imagenFinal;
       var imagenSrcParaCanvas = imagenBase64 ? ('data:image/png;base64,' + imagenBase64) : imagenUrlAbsoluta;
-      var captionFb = titulo + (excerpt ? '\n\n' + excerpt : '') + '\n\n' + urlNota;
+      var captionFb = (excerpt ? excerpt + '\n\n' : '') + urlNota;
       setTimeout(function() {
         crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt).then(function(blob) {
           if(debePublicarFb) {
