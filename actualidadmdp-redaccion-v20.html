@@ -52,6 +52,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .fnac{background:#fef3c7;color:#78350f}
 .fint{background:#dcfce7;color:#14532d}
 .nc-time{font-size:9px;color:var(--muted);white-space:nowrap}
+.nc-seg{font-size:9px;font-weight:700;letter-spacing:.3px;padding:2px 7px;border-radius:2px;white-space:nowrap;flex-shrink:0}
 .nc-titulo{font-size:13px;font-weight:700;color:var(--navy);line-height:1.4;margin-bottom:4px}
 .nc-desc{font-size:11px;color:var(--muted);line-height:1.55;margin-bottom:8px}
 .nc-footer{display:flex;align-items:center;justify-content:space-between;gap:6px}
@@ -343,12 +344,44 @@ var GITHUB_OWNER = 'merlojonatan1984';
 var GITHUB_REPO = 'actualidad-mdp-web';
 var CATEGORIA_LABELS = {
   'la-ciudad': 'LA CIUDAD',
-  'provincia': 'PROVINCIA',
+  'provincia': 'POLITICA',
   'deportes': 'DEPORTES',
   'arte-y-espectaculo': 'ARTE Y ESPECTACULO',
   'policiales': 'POLICIALES',
   'mundo': 'MUNDO'
 };
+
+// Etiqueta de "segmento" — no es la sección del sitio (esa ya está en nc-cat), es una pista
+// rápida de POR QUÉ le podría interesar a la gente y compartirla, para elegir más rápido de
+// un vistazo en la lista. Se calcula solo por palabras clave en el título/copete, primer
+// segmento que matchea gana (el orden de SEGMENTOS importa).
+var SEGMENTOS = [
+  { id:'alerta',   emoji:'🚨', label:'Alerta',       color:'#d42b2b',
+    kws:['alerta','accidente','choque','incendio','emergencia','evacua','explosion','murio','muerte','tragedia','fallecio','femicidio','corte de luz','corte de agua','herido'] },
+  { id:'polemica', emoji:'🔥', label:'Polemica',     color:'#7c3aed',
+    kws:['escandalo','denuncia','polemica','critico','cuestiono','repudio','indignacion'] },
+  { id:'plata',    emoji:'💰', label:'Tu bolsillo',  color:'#1a8f4a',
+    kws:['dolar','precio','aumento','descuento','sueldo','jubilacion','beneficio','ahorro','gratis','subsidio'] },
+  { id:'viral',    emoji:'👀', label:'Viral',        color:'#db2777',
+    kws:['viral','insolito','furor','sorprendio'] },
+  { id:'positiva', emoji:'🎉', label:'Buena noticia',color:'#f59e0b',
+    kws:['inauguro','festejo','solidaria','premio','logro','record','orgullo','celebran'] }
+];
+
+function quitarTildes(s) {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function detectarSegmento(titulo, desc) {
+  var t = quitarTildes((titulo + ' ' + (desc || '')).toLowerCase());
+  for (var i = 0; i < SEGMENTOS.length; i++) {
+    var s = SEGMENTOS[i];
+    for (var j = 0; j < s.kws.length; j++) {
+      if (t.indexOf(s.kws[j]) !== -1) return s;
+    }
+  }
+  return null;
+}
 
 var medioActual = 'todos';
 var todasNoticias = [];
@@ -823,8 +856,11 @@ function mostrar(noticias) {
   }
   var html = '';
   noticias.forEach(function(n, i) {
-    html += '<div class="ncard" id="nc' + i + '" onclick="seleccionar(' + i + ')">' +
-      '<div class="nc-top"><input type="checkbox" class="nc-check" onclick="event.stopPropagation();toggleColaSeleccion(' + i + ',this.checked)"/><span class="nc-fuente f' + n.tipo + '">' + n.medio + '</span><span class="nc-time">' + tiempoRelativo(n.fecha) + '</span></div>' +
+    var seg = detectarSegmento(n.titulo, n.descCorta);
+    var segBadge = seg ? '<span class="nc-seg" style="background:' + seg.color + '22;color:' + seg.color + '">' + seg.emoji + ' ' + seg.label + '</span>' : '';
+    var bordeSeg = seg ? ' style="border-left:4px solid ' + seg.color + '"' : '';
+    html += '<div class="ncard" id="nc' + i + '"' + bordeSeg + ' onclick="seleccionar(' + i + ')">' +
+      '<div class="nc-top"><div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden"><input type="checkbox" class="nc-check" onclick="event.stopPropagation();toggleColaSeleccion(' + i + ',this.checked)"/><span class="nc-fuente f' + n.tipo + '">' + n.medio + '</span>' + segBadge + '</div><span class="nc-time">' + tiempoRelativo(n.fecha) + '</span></div>' +
       '<div class="nc-titulo">' + n.titulo + '</div>' +
       '<div class="nc-desc">' + n.descCorta + '</div>' +
       '<div class="nc-footer"><span class="nc-cat">📂 ' + (CATEGORIA_LABELS[n.cat] || n.cat) + '</span>' +
