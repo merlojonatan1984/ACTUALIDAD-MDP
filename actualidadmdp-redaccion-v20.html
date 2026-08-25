@@ -264,6 +264,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <div class="right">
     <div class="rh">
       <div class="rh-title">✏ Editor</div>
+      <a id="rh-fuente" href="#" target="_blank" style="display:none;font-size:11px;color:var(--accent);font-weight:600;text-decoration:none;margin-bottom:7px">🔗 Ver noticia original (para bajar imágenes)</a>
       <div class="rh-btns">
         <button class="btn btn-ai" onclick="generarConIA()">✦ Generar con IA</button>
         <button class="btn btn-tit" onclick="sugerirTitulos()">💡 Títulos</button>
@@ -908,6 +909,13 @@ function seleccionar(i) {
   noticiaActual = window._noticias[i];
   notaEditando = null;
   document.querySelector('.layout').classList.add('modo-edicion');
+  var linkFuente = document.getElementById('rh-fuente');
+  if (noticiaActual.url && noticiaActual.url !== '#') {
+    linkFuente.href = noticiaActual.url;
+    linkFuente.style.display = 'block';
+  } else {
+    linkFuente.style.display = 'none';
+  }
   document.getElementById('e-titulo').value = noticiaActual.titulo;
   document.getElementById('e-sec').value = noticiaActual.cat;
   document.getElementById('e-texto').value = '';
@@ -1737,6 +1745,7 @@ function limpiar() {
   noticiaActual = null;
   notaEditando = null;
   document.querySelector('.layout').classList.remove('modo-edicion');
+  document.getElementById('rh-fuente').style.display = 'none';
   resetImagenManual();
   document.querySelectorAll('.ncard').forEach(function(c) { c.classList.remove('sel'); });
   setStatus('Listo para una nueva noticia.', '');
