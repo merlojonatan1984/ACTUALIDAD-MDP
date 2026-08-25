@@ -878,7 +878,7 @@ function seleccionar(i) {
   if(el) el.classList.add('sel');
   noticiaActual = window._noticias[i];
   notaEditando = null;
-  document.querySelector('.layout').classList.remove('modo-edicion');
+  document.querySelector('.layout').classList.add('modo-edicion');
   document.getElementById('e-titulo').value = noticiaActual.titulo;
   document.getElementById('e-sec').value = noticiaActual.cat;
   document.getElementById('e-texto').value = '';
