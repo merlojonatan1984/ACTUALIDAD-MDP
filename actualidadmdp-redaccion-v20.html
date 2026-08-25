@@ -206,6 +206,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <span class="mb" onclick="setMedio('puntonoticias',this)">Punto Noticias</span>
   <span class="mb" onclick="setMedio('elmarplatense',this)">El Marplatense</span>
   <span class="mb" onclick="setMedio('quedigital',this)">Qué Digital</span>
+  <span class="mb" onclick="setMedio('noticiasmdpcultura',this)">🎭 Noticias MDP (Cultura)</span>
+  <span class="mb" onclick="setMedio('enes',this)">🎸 Esto No Está Sucediendo</span>
   <span class="sep">|</span>
   <span class="mb provincia" onclick="setMedio('eldia',this)">El Día (La Plata)</span>
   <span class="mb provincia" onclick="setMedio('0221',this)">0221 (La Plata)</span>
@@ -331,6 +333,8 @@ var MEDIOS = {
   'elpais':      {n:'El Pais',        t:'inter',    url:'https://elpais.com',              rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada'},
   'elmarplatense':{n:'El Marplatense', t:'local',   url:'https://www.elmarplatense.com',   rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://elmarplatenseapiv3.eleco.com.ar/feed-notes'},
   'quedigital':  {n:'Que Digital',    t:'local',    url:'https://quedigital.com.ar',       rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://quedigital.com.ar/feed/'},
+  'noticiasmdpcultura':{n:'Noticias MDP (Cultura)', t:'local', url:'https://noticiasmdp.com/arte-cultura/', rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://noticiasmdp.com/arte-cultura/feed/', catForzada:'arte-y-espectaculo'},
+  'enes':        {n:'Esto No Está Sucediendo', t:'local', url:'https://estonoestasucediendo.com.ar', rss:'https://estonoestasucediendo.com.ar/feed', catForzada:'arte-y-espectaculo'},
   'eldia':       {n:'El Dia',         t:'provincia', url:'https://www.eldia.com',           rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.eldia.com/feed'},
   '0221':        {n:'0221',           t:'provincia', url:'https://www.0221.com.ar',         rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://www.0221.com.ar/rss/pages/ultimas-noticias.xml'}
 };
@@ -767,7 +771,7 @@ function cargar() {
           medio: m.n,
           tipo: m.t,
           fecha: pubDate ? new Date(pubDate) : new Date(),
-          cat: detectarCat(titulo)
+          cat: m.catForzada || detectarCat(titulo)
         });
       });
     }).catch(function(e) {
