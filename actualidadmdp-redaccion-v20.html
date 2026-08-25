@@ -320,6 +320,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
         </select>
       </div>
       <div class="fl">
+        <label>Texto para Instagram (opcional)</label>
+        <textarea class="fi fta-sm" id="e-texto-ig" placeholder="Si lo dejás vacío, usa el resumen automático de la nota + el link. Instagram acepta hasta 2200 caracteres, pero se lee mejor cortito." oninput="actualizarContadorIg()"></textarea>
+        <div class="wc" id="wc-ig">0 caracteres</div>
+      </div>
+      <div class="fl">
         <label>Texto de la nota</label>
         <div class="texto-toolbar">
           <button type="button" class="mini-btn" onclick="insertarSubtitulo()">🔖 Subtítulo</button>
@@ -1402,6 +1407,11 @@ function cargarNotaParaEditar(i) {
   setStatus('Editando nota publicada. Modifica el texto y presiona Publicar en el sitio para guardar los cambios.', 'ok');
 }
 
+function actualizarContadorIg() {
+  var el = document.getElementById('e-texto-ig');
+  document.getElementById('wc-ig').textContent = el.value.length + ' / 2200 caracteres';
+}
+
 function publicarEnSitio() {
   var btnCheck = document.querySelector('.btn-pub');
   if(btnCheck && btnCheck.disabled) return;
@@ -1469,6 +1479,22 @@ function confirmarYPublicar() {
   window._publicarFbEsteVez = fbLabel.style.display !== 'none' && document.getElementById('confirmar-fb').checked;
   document.getElementById('modal-confirmar-publicar').style.display = 'none';
   ejecutarPublicacion();
+}
+
+// Publica el link como comentario aparte, no en el posteo -- Facebook le baja el alcance
+// a los posteos que tienen un link visible en el texto principal. Mismo truco que ya usa
+// Esto No Esta Sucediendo.
+function comentarLinkEnFacebook(respuestaPublicacion, texto) {
+  var token = getFacebookToken();
+  if(!token || !respuestaPublicacion) return Promise.resolve(null);
+  var id = respuestaPublicacion.post_id || respuestaPublicacion.id;
+  if(!id) return Promise.resolve(null);
+  var body = new URLSearchParams();
+  body.set('message', texto);
+  body.set('access_token', token);
+  return fetch('https://graph.facebook.com/v21.0/' + id + '/comments', { method: 'POST', body: body })
+    .then(function(r) { return r.json(); })
+    .then(function(d) { if(d.error) throw new Error(d.error.message); return d; });
 }
 
 function publicarEnFacebook(fuente, caption, esBlob) {
@@ -1702,6 +1728,7 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
 function ejecutarPublicacion() {
   var titulo = document.getElementById('e-titulo').value.trim();
   var texto = document.getElementById('e-texto').value.trim();
+  var textoIgManual = document.getElementById('e-texto-ig') ? document.getElementById('e-texto-ig').value.trim() : '';
   var seccion = document.getElementById('e-sec').value;
 
   var esEdicion = !!notaEditando;
@@ -1768,15 +1795,24 @@ function ejecutarPublicacion() {
       // avisarle a Facebook/Instagram, para que la imagen ya este disponible en esa URL.
       var imagenUrlAbsoluta = 'https://actualidadmdp.com.ar' + imagenFinal;
       var imagenSrcParaCanvas = imagenBase64 ? ('data:image/png;base64,' + imagenBase64) : imagenUrlAbsoluta;
-      var captionFb = (excerpt ? excerpt + '\n\n' : '') + urlNota;
+      // Sin el link en el texto principal -- Facebook le baja el alcance a los posteos
+      // con link visible. Va aparte, como primer comentario (ver comentarLinkEnFacebook),
+      // despues de publicar.
+      var captionFb = (excerpt ? excerpt + '\n\n' : '') + '👇 Nota completa en el primer comentario';
+      // Instagram usa su propio texto si se cargo uno (campo "Texto para Instagram"),
+      // si no cae al mismo resumen automatico que Facebook -- separados porque cada red
+      // tiene su propio limite/estilo de texto.
+      var captionIg = (textoIgManual ? textoIgManual + '\n\n' : (excerpt ? excerpt + '\n\n' : '')) + urlNota;
       setTimeout(function() {
         crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt).then(function(blob) {
           if(debePublicarFb) {
-            publicarEnFacebook(blob, captionFb, true).then(function() {
+            publicarEnFacebook(blob, captionFb, true).then(function(resp) {
+              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).catch(function(e) { console.error('No se pudo comentar el link en Facebook:', e); });
               setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
             }).catch(function(e) {
               console.error('No se pudo armar la plantilla, se publica la foto sin marco:', e);
-              publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
+              publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function(resp) {
+                comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).catch(function(e3) { console.error('No se pudo comentar el link en Facebook:', e3); });
                 setStatus('✓ Compartido en Facebook SIN la plantilla (revisá la consola): ' + titulo, 'err');
               }).catch(function(e2) {
                 setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
@@ -1784,7 +1820,7 @@ function ejecutarPublicacion() {
             });
           }
           if(debePublicarIg) {
-            publicarEnInstagram(blob, captionFb, slug).then(function() {
+            publicarEnInstagram(blob, captionIg, slug).then(function() {
               setStatus('✓ Compartido en Instagram: ' + titulo, 'ok');
             }).catch(function(e) {
               setStatus('Error al compartir en Instagram "' + titulo + '": ' + e.message, 'err');
@@ -1792,7 +1828,8 @@ function ejecutarPublicacion() {
           }
         }).catch(function(e) {
           if(debePublicarFb) {
-            publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
+            publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function(resp) {
+              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).catch(function(e3) { console.error('No se pudo comentar el link en Facebook:', e3); });
               setStatus('✓ Compartido en Facebook SIN la plantilla (revisá la consola): ' + titulo, 'err');
               console.error('No se pudo armar la plantilla:', e);
             }).catch(function(e2) {
@@ -1842,6 +1879,10 @@ function limpiar() {
   document.getElementById('e-tits').value = '';
   document.getElementById('e-sec').value = 'la-ciudad';
   document.getElementById('wc').textContent = '0 palabras';
+  if (document.getElementById('e-texto-ig')) {
+    document.getElementById('e-texto-ig').value = '';
+    document.getElementById('wc-ig').textContent = '0 / 2200 caracteres';
+  }
   document.getElementById('img-box').style.display = 'none';
   noticiaActual = null;
   notaEditando = null;
