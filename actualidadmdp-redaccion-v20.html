@@ -850,13 +850,21 @@ function cargar() {
   });
 }
 
+// Busca PALABRAS COMPLETAS (con limites de palabra), no fragmentos sueltos -- antes
+// "arte" (de Arte y Espectaculo) matcheaba adentro de "martes" y clasificaba mal
+// cualquier noticia que mencionara un dia de la semana. Tambien ignora tildes, para que
+// "dolar"/"eleccion" encuentren "dólar"/"elección" igual.
+function coincidePalabra(texto, palabra) {
+  return new RegExp('\\b' + palabra.replace(/ /g, '\\s+') + '\\b', 'i').test(texto);
+}
 function detectarCat(titulo) {
-  var t = titulo.toLowerCase();
-  if(t.includes('policial')||t.includes('robo')||t.includes('detenido')||t.includes('crimen')||t.includes('asesina')||t.includes('homicidio')) return 'policiales';
-  if(t.includes('alvarado')||t.includes('aldosivi')||t.includes('kimberley')||t.includes('futbol')||t.includes('deporte')||t.includes('gol')||t.includes('liga')) return 'deportes';
-  if(t.includes('teatro')||t.includes('obra')||t.includes('festival')||t.includes('cultura')||t.includes('arte')||t.includes('musica')||t.includes('cine')) return 'arte-y-espectaculo';
-  if(t.includes('estados unidos')||t.includes('brasil')||t.includes('chile')||t.includes('europa')||t.includes('mundial')||t.includes('internacional')||t.includes('espana')||t.includes('trump')) return 'mundo';
-  if(t.includes('provincia')||t.includes('buenos aires')||t.includes('gobierno')||t.includes('milei')||t.includes('eleccion')||t.includes('dolar')||t.includes('inflacion')) return 'provincia';
+  var t = quitarTildes(titulo.toLowerCase());
+  function m(kws) { return kws.some(function(k) { return coincidePalabra(t, k); }); }
+  if(m(['policial','policiales','robo','robaron','detenido','crimen','asesina','homicidio'])) return 'policiales';
+  if(m(['alvarado','aldosivi','kimberley','futbol','deporte','deportivo','gol','goles','liga'])) return 'deportes';
+  if(m(['teatro','obra','festival','cultura','cultural','arte','artistico','musica','musical','cine'])) return 'arte-y-espectaculo';
+  if(m(['estados unidos','brasil','chile','europa','mundial','internacional','espana','trump'])) return 'mundo';
+  if(m(['provincia','buenos aires','gobierno','milei','eleccion','elecciones','dolar','inflacion'])) return 'provincia';
   return 'la-ciudad';
 }
 
