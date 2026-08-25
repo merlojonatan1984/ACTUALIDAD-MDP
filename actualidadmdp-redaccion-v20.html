@@ -855,13 +855,28 @@ function cargar() {
           var linkEl = item.querySelector('link');
           link = (linkEl ? linkEl.textContent.trim() : '') || m.url;
         }
-        var descEl = item.querySelector('description') || item.querySelector('summary') || item.querySelector('content');
-        var desc = descEl ? descEl.textContent : '';
+        // Preferimos el cuerpo completo del articulo (content:encoded) por sobre la
+        // descripcion corta -- muchos sitios de WordPress mandan en <description> apenas
+        // un teaser de una linea ("Conoce la cotizacion de..."), mientras que
+        // <content:encoded> trae el articulo entero, con los datos concretos (edad,
+        // calle, nombres) que antes se estaban perdiendo porque nunca se los mandaba
+        // a la IA. Si el feed no trae content:encoded (no es de WordPress), cae a la
+        // descripcion de siempre.
+        var contentEl = item.getElementsByTagName('content:encoded')[0];
+        var descEl = item.querySelector('description') || item.querySelector('summary');
+        var desc = (contentEl && contentEl.textContent.trim()) ? contentEl.textContent : (descEl ? descEl.textContent : '');
         var fechaEl = item.querySelector('pubDate') || item.querySelector('published') || item.querySelector('updated');
         var pubDate = fechaEl ? fechaEl.textContent : '';
         var tmp = document.createElement('div');
         tmp.innerHTML = desc;
-        var descFull = tmp.textContent.trim().substring(0, 3000);
+        // Limpia el pie de sindicacion que WordPress agrega solo ("La noticia X se
+        // publico primero en Y", "Noticia brindada por RSS...") -- no es parte de la
+        // nota real, y solo agrega ruido a lo que lee la IA.
+        var descFull = tmp.textContent
+          .replace(/La (nota|noticia)[\s\S]*?se public[oó] primero en[\s\S]*?\.\s*/gi, '')
+          .replace(/Noticia b\S*dada por RSS[^\n]*\s*/gi, '')
+          .trim()
+          .substring(0, 4000);
         todasNoticias.push({
           titulo: titulo,
           desc: descFull || 'Sin descripcion disponible.',
