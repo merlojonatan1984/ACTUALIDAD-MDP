@@ -1127,6 +1127,7 @@ function generarTextoParaNoticia(noticia) {
       'REGLAS ESTRICTAS:\n' +
       '1. Usa UNICAMENTE los datos de la lista. No agregues ningun dato, cifra, nombre o fecha que no este ahi.\n' +
       '2. Cada oracion tiene que aportar al menos un dato concreto de la lista (un nombre, una cifra, una fecha, un lugar, una cita, un paso del proceso). Si una oracion no suma ningun dato nuevo, directamente no la escribas.\n' +
+      '2b. Al reves de la regla anterior: TODOS los campos de la lista que no digan "No especificado" tienen que quedar mencionados en la nota, en especial QUIEN (quien organiza/protagoniza el hecho) y CUANDO (las fechas) -- estos dos nunca pueden faltar, aunque la nota te quede mas larga. No es opcional resumir salteandote alguno.\n' +
       '3. La nota termina con el ultimo dato concreto disponible -- esta PROHIBIDO agregar un parrafo de cierre reflexivo, generico o de "conclusion" que no aporte datos nuevos.\n' +
       '4. Si un campo de la lista dice "No especificado", no hables de ese aspecto y no lo reemplaces por una frase generica o vaga.\n' +
       '5. Tenes PROHIBIDO usar estas frases o variantes muy parecidas (en cualquier conjugacion) en el texto que redactes vos: ' + FRASES_PROHIBIDAS.concat(PATRONES_PROHIBIDOS.map(function(p){return p.etiqueta;})).map(function(f){return '"'+f+'"';}).join(', ') + '. Esta prohibicion NO aplica dentro de una cita textual entre comillas -- si la persona citada uso alguna de esas frases, la cita va tal cual la dijo, sin modificarla.\n' +
@@ -1184,6 +1185,21 @@ function verificarCifrasPerdidas(listaDatos, textoFinal) {
   return numeros.filter(function(n) { return textoFinal.indexOf(n) === -1; });
 }
 
+// Los meses son un vocabulario chico y cerrado -- si la fuente menciona "octubre"
+// en el campo CUANDO y la nota final no lo menciona en ningun lado, es una senial
+// bastante confiable de que se salteo la fecha (paso real: la IA tenia "1 y 2 de
+// octubre" en la lista y la nota final no mencionaba ningun mes).
+var MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','setiembre','octubre','noviembre','diciembre'];
+
+function verificarFechasPerdidas(listaDatos, textoFinal) {
+  var seccion = extraerSeccionDeLista(listaDatos, 'CUANDO', ['COMO', 'CIFRAS Y MONTOS']);
+  if (!seccion || /no especificado/i.test(seccion)) return [];
+  var base = quitarTildes(seccion.toLowerCase());
+  var baseFinal = quitarTildes(textoFinal.toLowerCase());
+  var mesesEnFuente = MESES.filter(function(m) { return base.indexOf(quitarTildes(m)) !== -1; });
+  return mesesEnFuente.filter(function(m) { return baseFinal.indexOf(quitarTildes(m)) === -1; });
+}
+
 function verificarNota(texto, listaDatos) {
   var avisos = [];
   if (!texto) return avisos;
@@ -1191,6 +1207,8 @@ function verificarNota(texto, listaDatos) {
   if (frases.length) avisos.push('Aparecen posibles frases de relleno: "' + frases.join('", "') + '".');
   var faltantes = verificarCifrasPerdidas(listaDatos, texto);
   if (faltantes.length) avisos.push('Estos numeros que la fuente tenia no aparecen en el texto final: ' + faltantes.join(', ') + '.');
+  var mesesFaltantes = verificarFechasPerdidas(listaDatos, texto);
+  if (mesesFaltantes.length) avisos.push('La fuente menciona fecha(s) en ' + mesesFaltantes.join(', ') + ' pero no aparecen en el texto final -- revisa que no se haya salteado el CUANDO.');
   // Una nota real nunca deberia tener corchetes -- si aparecen, casi siempre es
   // la IA dejando un comentario tipo "[texto incompleto]" en vez de datos reales
   // (paso real: paso con la cita cortada del piano de Freddie Mercury).
