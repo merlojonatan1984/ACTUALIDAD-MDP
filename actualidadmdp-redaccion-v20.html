@@ -896,11 +896,15 @@ function cargar() {
         // Limpia el pie de sindicacion que WordPress agrega solo ("La noticia X se
         // publico primero en Y", "Noticia brindada por RSS...") -- no es parte de la
         // nota real, y solo agrega ruido a lo que lee la IA.
+        // El corte en 4000 caracteres cortaba articulos largos a mitad de una cita o
+        // un dato (paso real: la ultima cita de una nota de 4227 caracteres quedo
+        // literalmente cortada a mitad de palabra y la IA la reproducia incompleta).
+        // 20000 cubre cualquier articulo real sin problema.
         var descFull = tmp.textContent
           .replace(/La (nota|noticia)[\s\S]*?se public[oó] primero en[\s\S]*?\.\s*/gi, '')
           .replace(/Noticia b\S*dada por RSS[^\n]*\s*/gi, '')
           .trim()
-          .substring(0, 4000);
+          .substring(0, 20000);
         todasNoticias.push({
           titulo: titulo,
           desc: descFull || 'Sin descripcion disponible.',
@@ -1114,7 +1118,8 @@ var PATRONES_PROHIBIDOS = [
 // generica para disimularlo.
 function generarTextoParaNoticia(noticia) {
   var promptExtraccion = 'Analiza la siguiente informacion de una noticia y extrae SOLO los datos concretos que efectivamente figuran en el texto. Organizalos en esta lista exacta. Si un dato NO figura en la informacion, escribi "No especificado" en esa linea -- no inventes nada ni lo completes con supuestos.\n\n' +
-    'QUIEN:\nQUE:\nDONDE:\nCUANDO:\nCOMO (proceso, forma de participar/comprar/acceder, requisitos):\nCIFRAS Y MONTOS (precios, edades, cantidades, porcentajes, numeros de expediente):\nNOMBRES PROPIOS Y ENTIDADES (personas, instituciones, marcas, lugares especificos):\nCITAS TEXTUALES (declaraciones entre comillas, copialas tal cual si hay):\n\n' +
+    'Si la informacion parece cortada a mitad de una oracion o de una cita (por ejemplo, termina de golpe sin punto final), NO transcribas esa parte incompleta ni escribas algo como "[texto incompleto]" -- simplemente usa esa cita o dato solo hasta la ultima oracion completa, o si no queda nada completo, tratala como "No especificado".\n\n' +
+    'QUIEN:\nQUE:\nDONDE:\nCUANDO:\nCOMO (proceso, forma de participar/comprar/acceder, requisitos):\nCIFRAS Y MONTOS (precios, edades, cantidades, porcentajes, numeros de expediente):\nNOMBRES PROPIOS Y ENTIDADES (personas, instituciones, marcas, lugares especificos):\nCITAS TEXTUALES (declaraciones entre comillas, copialas tal cual si hay, solo si estan completas):\n\n' +
     'TITULO: ' + noticia.titulo + '\nINFORMACION: ' + noticia.desc + '\n\nResponde SOLO con esa lista completada, sin texto adicional antes ni despues.';
 
   return llamarIA(promptExtraccion).then(function(listaDatos) {
@@ -1125,7 +1130,8 @@ function generarTextoParaNoticia(noticia) {
       '3. La nota termina con el ultimo dato concreto disponible -- esta PROHIBIDO agregar un parrafo de cierre reflexivo, generico o de "conclusion" que no aporte datos nuevos.\n' +
       '4. Si un campo de la lista dice "No especificado", no hables de ese aspecto y no lo reemplaces por una frase generica o vaga.\n' +
       '5. Tenes PROHIBIDO usar estas frases o variantes muy parecidas (en cualquier conjugacion) en el texto que redactes vos: ' + FRASES_PROHIBIDAS.concat(PATRONES_PROHIBIDOS.map(function(p){return p.etiqueta;})).map(function(f){return '"'+f+'"';}).join(', ') + '. Esta prohibicion NO aplica dentro de una cita textual entre comillas -- si la persona citada uso alguna de esas frases, la cita va tal cual la dijo, sin modificarla.\n' +
-      '6. No copies frases enteras textuales de la lista salvo que sea una cita entre comillas de una persona (esa si va textual).\n\n' +
+      '6. No copies frases enteras textuales de la lista salvo que sea una cita entre comillas de una persona (esa si va textual).\n' +
+      '7. Nunca escribas comentarios sobre la fuente ni marcadores como "[texto incompleto]", "[dato faltante]" o similares dentro de la nota -- si algo esta incompleto o falta, directamente no lo menciones.\n\n' +
       'LISTA DE DATOS:\n' + listaDatos + '\n\nResponde SOLO con el texto final de la nota. Sin titulo, sin aclaraciones, sin repetir la lista.';
 
     return llamarIA(promptRedaccion).then(function(texto) {
@@ -1185,6 +1191,11 @@ function verificarNota(texto, listaDatos) {
   if (frases.length) avisos.push('Aparecen posibles frases de relleno: "' + frases.join('", "') + '".');
   var faltantes = verificarCifrasPerdidas(listaDatos, texto);
   if (faltantes.length) avisos.push('Estos numeros que la fuente tenia no aparecen en el texto final: ' + faltantes.join(', ') + '.');
+  // Una nota real nunca deberia tener corchetes -- si aparecen, casi siempre es
+  // la IA dejando un comentario tipo "[texto incompleto]" en vez de datos reales
+  // (paso real: paso con la cita cortada del piano de Freddie Mercury).
+  var corchetes = texto.match(/\[[^\]]{1,80}\]/g);
+  if (corchetes) avisos.push('Aparecen corchetes en el texto, revisa que no sean comentarios de la IA colados en la nota: ' + corchetes.join(' / ') + '.');
   return avisos;
 }
 
