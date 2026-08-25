@@ -42,6 +42,15 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .layout.modo-edicion .fta{min-height:60vh}
 .layout.modo-edicion .rbody{max-width:900px;margin:0 auto;width:100%}
 .layout.modo-edicion .fl:has(#e-texto){display:flex;flex-direction:column;flex-shrink:0}
+#panel-fuente{position:fixed;top:132px;left:18px;width:220px;max-height:calc(100vh - 150px);overflow-y:auto;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px;box-shadow:0 4px 16px rgba(0,0,0,0.08);display:none;z-index:50}
+.pf-label{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.pf-medio{font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin-bottom:5px}
+.pf-titulo{font-size:12.5px;font-weight:700;color:var(--navy);line-height:1.4;margin-bottom:12px}
+.pf-btn{display:block;text-align:center;background:var(--navy);color:#fff;border-radius:5px;padding:8px 10px;font-size:11px;font-weight:700;text-decoration:none}
+.pf-btn:hover{background:var(--accent)}
+.pf-item{font-size:11px;color:var(--muted);padding:5px 0;border-top:1px solid var(--border);line-height:1.4}
+.pf-item-actual{color:var(--navy);font-weight:700}
+@media (max-width:1360px){#panel-fuente{display:none !important}}
 .left{overflow-y:auto;padding:10px;background:var(--bg)}
 .skel{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200%;animation:sh 1.2s infinite;border-radius:3px}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -331,6 +340,14 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 
 <div class="toast" id="toast">¡Copiado! Pegalo en Blogger</div>
 
+<div id="panel-fuente">
+  <div class="pf-label">Estás redactando esta noticia</div>
+  <div class="pf-medio" id="pf-medio"></div>
+  <div class="pf-titulo" id="pf-titulo"></div>
+  <a class="pf-btn" id="pf-link" href="#" target="_blank">🔗 Abrir noticia original</a>
+  <div id="pf-lista"></div>
+</div>
+
 <script>
 var MEDIOS = {
   'ahoramdp':    {n:'Ahora MDP',      t:'local',   url:'https://ahoramardelplata.com.ar', rss:'https://rss-mdp.merlojonatan1984.workers.dev/?url=https://ahoramardelplata.com.ar/feed/'},
@@ -426,6 +443,7 @@ function toggleColaSeleccion(i, checked) {
   var btn = document.getElementById('btn-cola');
   document.getElementById('cola-count').textContent = colaSeleccion.length;
   btn.style.display = colaSeleccion.length > 0 ? 'flex' : 'none';
+  if (noticiaActual) actualizarPanelFuente();
 }
 
 function iniciarCola() {
@@ -449,6 +467,15 @@ function procesarSiguienteEnCola() {
   var item = colaItems[colaPos];
   noticiaActual = item;
   notaEditando = null;
+  document.querySelector('.layout').classList.add('modo-edicion');
+  var linkFuente = document.getElementById('rh-fuente');
+  if (item.url && item.url !== '#') {
+    linkFuente.href = item.url;
+    linkFuente.style.display = 'block';
+  } else {
+    linkFuente.style.display = 'none';
+  }
+  actualizarPanelFuente();
   document.getElementById('e-titulo').value = item.titulo;
   document.getElementById('e-sec').value = item.cat;
   document.getElementById('e-texto').value = '';
@@ -910,6 +937,37 @@ function mostrar(noticias) {
   window._noticias = noticias;
 }
 
+// Arma el panel fijo de la izquierda (solo visible en pantallas anchas, ver media query)
+// con la noticia que se esta redactando y, si hay mas de una seleccionada con el
+// checkbox (cola de publicacion), la lista de todas para no tener que volver a la lista
+// principal para ver cuales quedan.
+function actualizarPanelFuente() {
+  var panel = document.getElementById('panel-fuente');
+  if (!noticiaActual) { panel.style.display = 'none'; return; }
+  document.getElementById('pf-medio').textContent = noticiaActual.medio || '';
+  document.getElementById('pf-titulo').textContent = noticiaActual.titulo;
+  var link = document.getElementById('pf-link');
+  if (noticiaActual.url && noticiaActual.url !== '#') {
+    link.href = noticiaActual.url;
+    link.style.display = 'block';
+  } else {
+    link.style.display = 'none';
+  }
+  var itemsCola = colaActiva ? colaItems : colaSeleccion.map(function(i) { return window._noticias[i]; });
+  var lista = document.getElementById('pf-lista');
+  if (itemsCola.length > 1) {
+    lista.innerHTML = '<div class="pf-label" style="margin-top:14px">' + (colaActiva ? 'Procesando cola' : 'Seleccionadas') + ' (' + itemsCola.length + ')</div>' +
+      itemsCola.map(function(it, idx) {
+        var actual = colaActiva && idx === colaPos;
+        var t = it.titulo.length > 55 ? it.titulo.slice(0, 55) + '…' : it.titulo;
+        return '<div class="pf-item' + (actual ? ' pf-item-actual' : '') + '">' + (actual ? '▶ ' : '') + t + '</div>';
+      }).join('');
+  } else {
+    lista.innerHTML = '';
+  }
+  panel.style.display = 'block';
+}
+
 function seleccionar(i) {
   document.querySelectorAll('.ncard').forEach(function(c) { c.classList.remove('sel'); });
   var el = document.getElementById('nc' + i);
@@ -924,6 +982,7 @@ function seleccionar(i) {
   } else {
     linkFuente.style.display = 'none';
   }
+  actualizarPanelFuente();
   document.getElementById('e-titulo').value = noticiaActual.titulo;
   document.getElementById('e-sec').value = noticiaActual.cat;
   document.getElementById('e-texto').value = '';
@@ -1754,6 +1813,7 @@ function limpiar() {
   notaEditando = null;
   document.querySelector('.layout').classList.remove('modo-edicion');
   document.getElementById('rh-fuente').style.display = 'none';
+  document.getElementById('panel-fuente').style.display = 'none';
   resetImagenManual();
   document.querySelectorAll('.ncard').forEach(function(c) { c.classList.remove('sel'); });
   setStatus('Listo para una nueva noticia.', '');
