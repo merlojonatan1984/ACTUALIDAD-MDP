@@ -1200,6 +1200,25 @@ function verificarFechasPerdidas(listaDatos, textoFinal) {
   return mesesEnFuente.filter(function(m) { return baseFinal.indexOf(quitarTildes(m)) === -1; });
 }
 
+// Nombres propios y entidades son texto libre (no un vocabulario cerrado como los
+// meses, ni un patron numerico como las cifras), asi que esto es mas tolerante a
+// falsos positivos que los otros chequeos -- pero el caso real que motivo esto (la
+// casa de subastas Propstore, detectada en el Paso 1 pero ausente en la nota final)
+// no es ni una cifra ni una fecha, asi que sin este chequeo pasaba desapercibido.
+function verificarEntidadesPerdidas(listaDatos, textoFinal) {
+  var seccion = extraerSeccionDeLista(listaDatos, 'NOMBRES PROPIOS Y ENTIDADES', ['CITAS TEXTUALES']);
+  if (!seccion || /no especificado/i.test(seccion)) return [];
+  var candidatos = seccion.split(/[,;\n]/).map(function(c) {
+    return c.replace(/^[\s\-•*]+/, '').trim();
+  }).filter(function(c) {
+    return c.length >= 3 && !/^no especificado$/i.test(c);
+  });
+  var baseFinal = quitarTildes(textoFinal.toLowerCase());
+  return candidatos.filter(function(c) {
+    return baseFinal.indexOf(quitarTildes(c.toLowerCase())) === -1;
+  });
+}
+
 function verificarNota(texto, listaDatos) {
   var avisos = [];
   if (!texto) return avisos;
