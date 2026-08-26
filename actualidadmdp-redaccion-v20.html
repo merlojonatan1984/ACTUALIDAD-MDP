@@ -1282,6 +1282,8 @@ function verificarNota(texto, listaDatos) {
   if (faltantes.length) avisos.push('Estos numeros que la fuente tenia no aparecen en el texto final: ' + faltantes.join(', ') + '.');
   var mesesFaltantes = verificarFechasPerdidas(listaDatos, texto);
   if (mesesFaltantes.length) avisos.push('La fuente menciona fecha(s) en ' + mesesFaltantes.join(', ') + ' pero no aparecen en el texto final -- revisa que no se haya salteado el CUANDO.');
+  var entidadesFaltantes = verificarEntidadesPerdidas(listaDatos, texto);
+  if (entidadesFaltantes.length) avisos.push('Estos nombres/organizaciones que la fuente tenia no aparecen en el texto final: ' + entidadesFaltantes.join(', ') + '.');
   // Una nota real nunca deberia tener corchetes -- si aparecen, casi siempre es
   // la IA dejando un comentario tipo "[texto incompleto]" en vez de datos reales
   // (paso real: paso con la cita cortada del piano de Freddie Mercury).
