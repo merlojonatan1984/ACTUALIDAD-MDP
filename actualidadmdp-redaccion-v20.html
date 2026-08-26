@@ -84,6 +84,14 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .aviso-gram b{display:block;margin-bottom:4px}
 .aviso-gram ul{margin:0;padding-left:18px}
 .aviso-gram li{margin-bottom:4px}
+.puntaje-calidad{display:none;align-items:center;gap:14px;padding:10px 14px;border-radius:8px;margin:0 0 12px;border:1px solid var(--border)}
+.puntaje-calidad .pc-numero{font-size:26px;font-weight:800;line-height:1;white-space:nowrap}
+.puntaje-calidad .pc-texto{font-size:11.5px;line-height:1.5}
+.puntaje-calidad .pc-texto small{display:block;margin-top:3px;opacity:0.75;font-size:10px}
+.puntaje-calidad.pc-verde{background:#e7f7ec;border-color:#1a8f4a;color:#146b38}
+.puntaje-calidad.pc-amarillo{background:#FFF3E0;border-color:#E8A33D;color:#7A4A00}
+.puntaje-calidad.pc-naranja{background:#FDE8D8;border-color:#E8833A;color:#8a3d00}
+.puntaje-calidad.pc-rojo{background:#FCE8E8;border-color:#d42b2b;color:#8f1c1c}
 .left{overflow-y:auto;padding:10px;background:var(--bg)}
 .skel{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200%;animation:sh 1.2s infinite;border-radius:3px}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -345,6 +353,10 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
         <button class="btn btn-cl" onclick="limpiar()">◀ Volver a la lista</button>
       </div>
     </div>
+    <div class="puntaje-calidad" id="puntaje-calidad" style="display:none">
+      <div class="pc-numero" id="pc-numero"></div>
+      <div class="pc-texto" id="pc-texto"></div>
+    </div>
     <div class="rbody">
       <div class="fl">
         <label>Título</label>
@@ -548,6 +560,7 @@ function procesarSiguienteEnCola() {
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
   mostrarAvisosGramatica(null);
+  ocultarPuntaje();
   mostrarDatosExtraidos(null);
   resetImagenManual();
   wc();
@@ -1084,6 +1097,7 @@ function seleccionar(i) {
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
   mostrarAvisosGramatica(null);
+  ocultarPuntaje();
   mostrarDatosExtraidos(null);
   resetImagenManual();
   wc();
@@ -1327,6 +1341,7 @@ function generarConIA() {
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
   mostrarAvisosGramatica(null);
+  ocultarPuntaje();
   mostrarDatosExtraidos(null);
   setStatus('Generando nota con IA...', 'loading');
   // Si el usuario pego el texto completo a mano (fuente corta tipo RSS de BBC),
@@ -1342,6 +1357,7 @@ function generarConIA() {
     mostrarDatosExtraidos(res ? res.listaDatos : null);
     mostrarAvisosIA(res ? res.avisos : null);
     mostrarAvisoFuente(noticiaParaGenerar.desc);
+    calcularYMostrarPuntaje();
     if (res && res.avisos && res.avisos.length) {
       setStatus('Nota generada con avisos -- revisa el cartel amarillo antes de publicar.', 'err');
     } else {
@@ -1373,6 +1389,7 @@ function corregirConIA() {
     wc();
     var nuevosAvisos = verificarNota(corregido, listaDatos);
     mostrarAvisosIA(nuevosAvisos);
+    calcularYMostrarPuntaje();
     if (nuevosAvisos.length) {
       setStatus('Corregido, pero todavia quedan avisos -- revisalos.', 'err');
     } else {
@@ -1402,6 +1419,7 @@ function revisarGramatica() {
   }).then(function(r) { return r.json(); }).then(function(d) {
     var matches = d.matches || [];
     mostrarAvisosGramatica(matches);
+    calcularYMostrarPuntaje();
     if(matches.length) {
       setStatus('🔤 Encontré ' + matches.length + ' posible(s) problema(s) de gramática/ortografía -- revisá el cartel.', 'err');
     } else {
@@ -1422,6 +1440,45 @@ function mostrarAvisosGramatica(matches) {
     return '<li><b>"' + frag + '"</b> — ' + m.message + (sugerencias ? ' (sugerencia: ' + sugerencias + ')' : '') + '</li>';
   }).join('');
   box.classList.add('show');
+}
+
+// Puntaje de calidad: no es una IA nueva juzgando la nota, es solo una cuenta
+// de los avisos que los chequeos automaticos YA encontraron (frases de relleno,
+// datos perdidos, fuente corta, gramatica) convertida en un numero facil de
+// leer de un vistazo. Por eso mismo tiene el mismo techo que esos chequeos: no
+// detecta cosas como una cita mal atribuida si el nombre igual aparece en el
+// texto (ver el caso real de Pakistan/Arab News).
+function ocultarPuntaje() {
+  document.getElementById('puntaje-calidad').style.display = 'none';
+}
+
+function calcularYMostrarPuntaje() {
+  var box = document.getElementById('puntaje-calidad');
+  var texto = document.getElementById('e-texto').value.trim();
+  if (!texto) { box.style.display = 'none'; return; }
+
+  var puntaje = 100;
+  var avisosIA = document.getElementById('aviso-ia-lista').querySelectorAll('li').length;
+  puntaje -= avisosIA * 12;
+
+  var fuenteCorta = document.getElementById('aviso-fuente').classList.contains('show');
+  if (fuenteCorta) puntaje -= 25;
+
+  var gramItems = document.getElementById('aviso-gram-lista').querySelectorAll('li').length;
+  puntaje -= Math.min(gramItems * 3, 21);
+
+  puntaje = Math.max(0, Math.min(100, puntaje));
+
+  var nivel, mensaje;
+  if (puntaje >= 90) { nivel = 'pc-verde'; mensaje = '✅ Muy bien, lista para revisar y publicar.'; }
+  else if (puntaje >= 70) { nivel = 'pc-amarillo'; mensaje = '🟡 Bien, pero revisá los avisos antes de publicar.'; }
+  else if (puntaje >= 50) { nivel = 'pc-naranja'; mensaje = '🟠 Atención, hay varios puntos para corregir.'; }
+  else { nivel = 'pc-rojo'; mensaje = '🔴 Todavía no la publiques, corregí primero.'; }
+
+  box.className = 'puntaje-calidad ' + nivel;
+  document.getElementById('pc-numero').textContent = puntaje + '%';
+  document.getElementById('pc-texto').innerHTML = mensaje + '<small>Es un chequeo automático, no reemplaza tu lectura -- no detecta todo (por ejemplo, un dato mal atribuido a la persona equivocada).</small>';
+  box.style.display = 'flex';
 }
 
 function sugerirTitulos() {
@@ -2328,6 +2385,7 @@ function limpiar() {
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
   mostrarAvisosGramatica(null);
+  ocultarPuntaje();
   mostrarDatosExtraidos(null);
   noticiaActual = null;
   notaEditando = null;
