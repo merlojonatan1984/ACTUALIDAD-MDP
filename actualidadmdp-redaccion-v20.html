@@ -79,6 +79,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .aviso-fuente{display:none;background:#E3F2FD;border:1px solid #64B5F6;border-radius:7px;padding:10px 12px;margin-bottom:9px;font-size:12px;line-height:1.55;color:#0D47A1}
 .aviso-fuente.show{display:block}
 .aviso-fuente b{display:block;margin-bottom:4px}
+.aviso-gram{display:none;background:#E0F2F1;border:1px solid #4DB6AC;border-radius:7px;padding:10px 12px;margin-bottom:9px;font-size:12px;line-height:1.55;color:#00443f}
+.aviso-gram.show{display:block}
+.aviso-gram b{display:block;margin-bottom:4px}
+.aviso-gram ul{margin:0;padding-left:18px}
+.aviso-gram li{margin-bottom:4px}
 .left{overflow-y:auto;padding:10px;background:var(--bg)}
 .skel{background:linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);background-size:200%;animation:sh 1.2s infinite;border-radius:3px}
 @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -116,6 +121,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .btn-cp{background:var(--green);color:#fff}
 .btn-cp:hover{background:#146b38}
 .btn-img{background:var(--purple);color:#fff}
+.btn-gram{background:#0e7c7b;color:#fff}
+.btn-gram:hover{background:#0a5c5b}
 .btn-fix{background:#E8A33D;color:#fff;margin-top:6px}
 .btn-fix:hover{background:#c9840f}
 .btn-img:hover{background:#6d28d9}
@@ -332,6 +339,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
         <button class="btn btn-tit" onclick="sugerirTitulos()">💡 Títulos</button>
         <button class="btn btn-img" onclick="generarCaricatura()">🎨 Imagen</button>
         <button class="btn btn-foto" onclick="buscarFotosLibres()">🖼 Fotos libres</button>
+        <button class="btn btn-gram" onclick="revisarGramatica()">🔤 Gramática</button>
         <button class="btn btn-cp" onclick="copiar()">⎘ Copiar</button>
         <button class="btn btn-pub" onclick="publicarEnSitio()">🚀 Publicar en el sitio</button>
         <button class="btn btn-cl" onclick="limpiar()">◀ Volver a la lista</button>
@@ -371,6 +379,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
         </div>
         <div class="aviso-fuente" id="aviso-fuente"><b>ℹ️ Fuente con poco texto</b><span>La fuente original parece tener muy poco texto (puede ser solo un resumen corto del feed RSS, no la nota completa) -- es probable que falten datos como lugar, fecha, cifras o nombres, y ningún botón automático puede inventarlos. Antes de publicar, abrí "Ver noticia original" y fijate si hay más información en el artículo real para completar la nota a mano.</span></div>
         <div class="aviso-ia" id="aviso-ia"><b>⚠️ Revisá antes de publicar</b><ul id="aviso-ia-lista"></ul><button type="button" class="btn btn-fix" id="btn-corregir-ia" onclick="corregirConIA()">🔧 Corregir automático</button></div>
+        <div class="aviso-gram" id="aviso-gram"><b>🔤 Posibles errores de gramática/ortografía</b><ul id="aviso-gram-lista"></ul></div>
         <textarea class="fi fta" id="e-texto" placeholder="Seleccioná una noticia y presioná Generar con IA..." oninput="wc()"></textarea>
         <div class="wc" id="wc">0 palabras</div>
       </div>
@@ -538,6 +547,7 @@ function procesarSiguienteEnCola() {
   document.getElementById('img-box').style.display = 'none';
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
+  mostrarAvisosGramatica(null);
   mostrarDatosExtraidos(null);
   resetImagenManual();
   wc();
@@ -1073,6 +1083,7 @@ function seleccionar(i) {
   document.getElementById('img-box').style.display = 'none';
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
+  mostrarAvisosGramatica(null);
   mostrarDatosExtraidos(null);
   resetImagenManual();
   wc();
@@ -1313,6 +1324,7 @@ function generarConIA() {
   if(!noticiaActual) { setStatus('Selecciona una noticia primero.', 'err'); return; }
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
+  mostrarAvisosGramatica(null);
   mostrarDatosExtraidos(null);
   setStatus('Generando nota con IA...', 'loading');
   // Si el usuario pego el texto completo a mano (fuente corta tipo RSS de BBC),
@@ -1365,6 +1377,49 @@ function corregirConIA() {
       setStatus('Corregido. Revisa el texto y publica.', 'ok');
     }
   }).catch(function(e) { setStatus('Error al corregir: ' + e.message, 'err'); });
+}
+
+// Revisor de gramatica/ortografia con LanguageTool (API publica y gratuita,
+// no hace falta clave). Es solo informativo -- muestra la lista de posibles
+// errores para que el usuario los corrija el mismo en el cuadro de texto, no
+// edita nada de forma automatica.
+function revisarGramatica() {
+  var texto = document.getElementById('e-texto').value.trim();
+  if(!texto) { setStatus('No hay texto para revisar.', 'err'); return; }
+  mostrarAvisosGramatica([]);
+  setStatus('Revisando gramática y ortografía...', 'loading');
+
+  var body = new URLSearchParams();
+  body.set('text', texto);
+  body.set('language', 'es');
+
+  fetch('https://api.languagetool.org/v2/check', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    var matches = d.matches || [];
+    mostrarAvisosGramatica(matches);
+    if(matches.length) {
+      setStatus('🔤 Encontré ' + matches.length + ' posible(s) problema(s) de gramática/ortografía -- revisá el cartel.', 'err');
+    } else {
+      setStatus('✓ No encontré problemas de gramática ni ortografía.', 'ok');
+    }
+  }).catch(function(e) {
+    setStatus('Error al revisar gramática: ' + e.message, 'err');
+  });
+}
+
+function mostrarAvisosGramatica(matches) {
+  var box = document.getElementById('aviso-gram');
+  var lista = document.getElementById('aviso-gram-lista');
+  if(!matches || !matches.length) { box.classList.remove('show'); lista.innerHTML = ''; return; }
+  lista.innerHTML = matches.map(function(m) {
+    var frag = m.context ? m.context.text.substring(m.context.offset, m.context.offset + m.context.length) : '';
+    var sugerencias = (m.replacements || []).slice(0, 3).map(function(r) { return r.value; }).filter(Boolean).join(' / ');
+    return '<li><b>"' + frag + '"</b> — ' + m.message + (sugerencias ? ' (sugerencia: ' + sugerencias + ')' : '') + '</li>';
+  }).join('');
+  box.classList.add('show');
 }
 
 function sugerirTitulos() {
@@ -2269,6 +2324,8 @@ function limpiar() {
   }
   document.getElementById('img-box').style.display = 'none';
   mostrarAvisosIA(null);
+  mostrarAvisoFuente(null);
+  mostrarAvisosGramatica(null);
   mostrarDatosExtraidos(null);
   noticiaActual = null;
   notaEditando = null;
