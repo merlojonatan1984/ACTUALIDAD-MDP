@@ -105,6 +105,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .btn-cp{background:var(--green);color:#fff}
 .btn-cp:hover{background:#146b38}
 .btn-img{background:var(--purple);color:#fff}
+.btn-fix{background:#E8A33D;color:#fff;margin-top:6px}
+.btn-fix:hover{background:#c9840f}
 .btn-img:hover{background:#6d28d9}
 .btn-cl{background:var(--border);color:var(--muted)}
 .btn-pub{background:var(--red);color:#fff}
@@ -344,7 +346,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
           <button type="button" class="mini-btn" onclick="insertarVideo()">🎬 Video acá</button>
           <span class="fotos-libres-hint" id="imagenes-inline-count" style="margin:0"></span>
         </div>
-        <div class="aviso-ia" id="aviso-ia"><b>⚠️ Revisá antes de publicar</b><ul id="aviso-ia-lista"></ul></div>
+        <div class="aviso-ia" id="aviso-ia"><b>⚠️ Revisá antes de publicar</b><ul id="aviso-ia-lista"></ul><button type="button" class="btn btn-fix" id="btn-corregir-ia" onclick="corregirConIA()">🔧 Corregir automático</button></div>
         <textarea class="fi fta" id="e-texto" placeholder="Seleccioná una noticia y presioná Generar con IA..." oninput="wc()"></textarea>
         <div class="wc" id="wc">0 palabras</div>
       </div>
@@ -1270,6 +1272,37 @@ function generarConIA() {
       setStatus('Nota generada. Revisa y publica en Blogger.', 'ok');
     }
   }).catch(function(e) { setStatus('Error: ' + e.message, 'err'); });
+}
+
+function corregirConIA() {
+  var texto = document.getElementById('e-texto').value;
+  var listaDatos = document.getElementById('pf-datos-texto').textContent;
+  var items = document.getElementById('aviso-ia-lista').querySelectorAll('li');
+  var avisos = Array.prototype.map.call(items, function(li) { return li.textContent; });
+  if (!texto || !avisos.length) return;
+  setStatus('Corrigiendo con IA...', 'loading');
+  var prompt = 'Tenes una nota periodistica ya redactada y una lista de avisos automaticos que detectaron ' +
+    'posibles datos importantes omitidos respecto a la informacion original de la fuente. Corregi el texto ' +
+    'SOLO para incorporar esos datos faltantes, de la forma mas natural posible, sin cambiar el resto de la ' +
+    'redaccion, el estilo ni el orden salvo donde sea necesario para sumar el dato. No inventes nada que no ' +
+    'este en la lista de datos original. No agregues comentarios, corchetes ni notas explicando el cambio.\n\n' +
+    'LISTA DE DATOS ORIGINAL (extraida de la fuente):\n' + listaDatos + '\n\n' +
+    'AVISOS A RESOLVER:\n- ' + avisos.join('\n- ') + '\n\n' +
+    'TEXTO ACTUAL:\n' + texto + '\n\n' +
+    'Responde SOLO con el texto corregido completo, sin explicaciones antes ni despues.';
+  llamarIA(prompt).then(function(res) {
+    if (!res) return;
+    var corregido = res.trim();
+    document.getElementById('e-texto').value = corregido;
+    wc();
+    var nuevosAvisos = verificarNota(corregido, listaDatos);
+    mostrarAvisosIA(nuevosAvisos);
+    if (nuevosAvisos.length) {
+      setStatus('Corregido, pero todavia quedan avisos -- revisalos.', 'err');
+    } else {
+      setStatus('Corregido. Revisa el texto y publica.', 'ok');
+    }
+  }).catch(function(e) { setStatus('Error al corregir: ' + e.message, 'err'); });
 }
 
 function sugerirTitulos() {
