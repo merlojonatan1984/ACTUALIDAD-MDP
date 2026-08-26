@@ -1141,6 +1141,10 @@ function generarTextoParaNoticia(noticia) {
       '8. Presuncion de inocencia: usa siempre "aprehendido", "imputado", "investigado" o "sospechoso". Prohibido usar "culpable", "asesino", "estafador" o similares salvo que la lista indique explicitamente que ya hay una condena o sentencia firme.\n' +
       '9. Usa el condicional ("habria ingresado", "seria el autor") para cualquier version, testimonio o dato que la lista presente como no confirmado, no peritado o atribuido a "fuentes" sin identificar -- no lo redactes como un hecho consumado.\n' +
       '10. Proteccion de menores: si algun dato de la lista revela el nombre, apellido, apodo, direccion o cualquier dato que permita identificar a un menor de 18 anos involucrado en un hecho delictivo o de vulnerabilidad, NO lo incluyas en la nota aunque figure en la lista -- referite a esa persona de forma generica (ej. "un adolescente", "un menor").\n\n' +
+      'ESTILO Y FORMATO:\n' +
+      '11. Preferi la voz activa ("la policia detuvo al sospechoso") por sobre la pasiva ("el sospechoso fue detenido por la policia"), siempre que la lista tenga claro quien hizo la accion.\n' +
+      '12. No uses adjetivos de juicio de valor ("terrible", "impactante", "increible", "aberrante") ni abuses de adverbios terminados en "-mente" -- describi con los datos concretos de la lista, no con calificativos.\n' +
+      '13. Numeros del cero al nueve escribilos en letras, del 10 en adelante en cifras (ej. "ocho allanamientos", "14 detenidos"), salvo que se trate de una cifra de dinero, hora o porcentaje, que siempre van en numeros. Los montos de dinero llevan el simbolo pegado al numero y punto para los miles (ej. "$150.000", "US$2.500"). Los horarios en formato de 24 horas (ej. "14:30", "a las 8 hs").\n\n' +
       'LISTA DE DATOS:\n' + listaDatos + '\n\nResponde SOLO con el texto final de la nota. Sin titulo, sin aclaraciones, sin repetir la lista.';
 
     return llamarIA(promptRedaccion).then(function(texto) {
@@ -1314,7 +1318,7 @@ function corregirConIA() {
 function sugerirTitulos() {
   if(!noticiaActual) { setStatus('Selecciona una noticia primero.', 'err'); return; }
   setStatus('Generando titulos...', 'loading');
-  llamarIA('Genera 5 titulos periodisticos para esta noticia del portal "Actualidad MDP". Directos, sin clickbait, maximo 12 palabras. Numeralos 1 al 5.\n\nNOTICIA: ' + noticiaActual.titulo + '\n\nResponde SOLO con los 5 titulos numerados.').then(function(res) {
+  llamarIA('Genera 5 titulos periodisticos para esta noticia del portal "Actualidad MDP". Directos, sin clickbait, entre 50 y 75 caracteres cada uno, sin punto final, con las palabras clave al principio. Numeralos 1 al 5.\n\nNOTICIA: ' + noticiaActual.titulo + '\n\nResponde SOLO con los 5 titulos numerados.').then(function(res) {
     if(res) { document.getElementById('e-tits').value = res; setStatus('Titulos generados.', 'ok'); }
   }).catch(function(e) { setStatus('Error: ' + e.message, 'err'); });
 }
