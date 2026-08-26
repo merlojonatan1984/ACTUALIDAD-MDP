@@ -1211,7 +1211,7 @@ function verificarEntidadesPerdidas(listaDatos, textoFinal) {
   var seccion = extraerSeccionDeLista(listaDatos, 'NOMBRES PROPIOS Y ENTIDADES', ['CITAS TEXTUALES']);
   if (!seccion || /no especificado/i.test(seccion)) return [];
   var candidatos = seccion.split(/[,;\n]/).map(function(c) {
-    return c.replace(/^[\s\-•*]+/, '').trim();
+    return c.replace(/^[\s:\-•*]+/, '').replace(/\s*\([^)]*\)\s*$/, '').trim();
   }).filter(function(c) {
     return c.length >= 3 && !/^no especificado$/i.test(c);
   });
