@@ -60,6 +60,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .pf-titulo{font-size:12.5px;font-weight:700;color:var(--navy);line-height:1.4;margin-bottom:14px}
 .pf-btn{display:block;text-align:center;background:var(--navy);color:#fff;border-radius:5px;padding:8px 10px;font-size:11px;font-weight:700;text-decoration:none}
 .pf-btn:hover{background:var(--accent)}
+.progreso-hoy{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 16px;background:#eef7f0;border-bottom:1px solid var(--border);font-size:11px}
+.progreso-hoy .ph-item{display:flex;align-items:center;gap:5px;background:#fff;border:1px solid var(--border);border-radius:5px;padding:4px 9px;font-weight:700;color:var(--navy)}
+.progreso-hoy .ph-item.ph-listo{border-color:#1a8f4a;color:#1a8f4a;background:#e7f7ec}
+.progreso-hoy .ph-item.ph-falta{border-color:#E8A33D;color:#8a5a00;background:#fff6e8}
+.progreso-hoy .ph-meta{margin-left:auto;font-size:10px;color:var(--muted);cursor:pointer;text-decoration:underline;background:none;border:none;padding:0}
 .pf-pegar{margin-top:10px;font-size:11px}
 .pf-pegar summary{cursor:pointer;color:var(--navy);font-weight:700;padding:4px 0}
 .pf-pegar textarea{width:100%;box-sizing:border-box;margin-top:6px;min-height:100px;font-size:11px;font-family:inherit;padding:8px;border:1px solid var(--border);border-radius:5px;resize:vertical}
@@ -277,6 +282,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <button class="btn-upd" id="btn-publicadas" onclick="verNotasPublicadas()" style="background:var(--navy)">
     📂 Notas publicadas
   </button>
+  <button class="btn-upd" id="btn-progreso" onclick="cargarProgresoDeHoy()" style="background:#1a8f4a">
+    📊 Progreso de hoy
+  </button>
   <button class="btn-upd" id="btn-cola" onclick="iniciarCola()" style="background:var(--purple);display:none">
     🚀 Procesar cola (<span id="cola-count">0</span>)
   </button>
@@ -285,6 +293,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   </button>
   <span class="n-count" id="n-count"></span>
 </div>
+
+<div class="progreso-hoy" id="progreso-hoy" style="display:none"></div>
 
 <div class="layout">
   <div class="left" id="left-panel">
@@ -1579,6 +1589,74 @@ function verNotasPublicadas() {
   });
 }
 
+// "Progreso de hoy": cuenta cuantas notas de cada categoria ya se publicaron
+// en la fecha de hoy, para que el usuario sepa de un vistazo que le falta
+// mientras va publicando notas a la mañana. Reusa el mismo listado de
+// src/content/posts que "Notas publicadas", solo que agrupado por categoria+fecha
+// en vez de mostrado como lista.
+function cargarProgresoDeHoy() {
+  var token = getGithubToken();
+  if(!token) { showModal(); setStatus('Ingresa tu token de GitHub para ver el progreso de hoy.', 'err'); return; }
+  var box = document.getElementById('progreso-hoy');
+  box.style.display = 'flex';
+  box.innerHTML = '<span>⏳ Cargando progreso de hoy...</span>';
+
+  githubGetFile('src/content/posts').then(function(files) {
+    var mdFiles = (Array.isArray(files) ? files : []).filter(function(f) { return f.name && f.name.indexOf('.md') === f.name.length - 3; });
+    if(!mdFiles.length) return [];
+    return Promise.allSettled(mdFiles.map(function(f) {
+      return githubGetFile(f.path).then(function(data) {
+        var contenido = base64ToUtf8(data.content);
+        var catMatch = contenido.match(/category:\s*"([^"]*)"/);
+        var dateMatch = contenido.match(/date:\s*(\S+)/);
+        return { categoria: catMatch ? catMatch[1] : 'la-ciudad', fecha: dateMatch ? dateMatch[1] : '' };
+      });
+    })).then(function(resultados) {
+      return resultados.filter(function(r) { return r.status === 'fulfilled'; }).map(function(r) { return r.value; });
+    });
+  }).then(function(notas) {
+    var hoy = new Date().toISOString().substring(0, 10);
+    var conteos = {};
+    Object.keys(CATEGORIA_LABELS).forEach(function(slug) { conteos[slug] = 0; });
+    notas.forEach(function(n) {
+      if (n.fecha === hoy && conteos.hasOwnProperty(n.categoria)) conteos[n.categoria]++;
+    });
+    window._progresoHoyCargado = true;
+    renderProgresoDeHoy(conteos);
+  }).catch(function(e) {
+    box.innerHTML = '<span>Error cargando el progreso de hoy: ' + e.message + '</span>';
+  });
+}
+
+function obtenerMetaDiaria() {
+  var m = parseInt(localStorage.getItem('mdp_meta_diaria'), 10);
+  return (m && m > 0) ? m : 2;
+}
+
+function editarMetaDiaria() {
+  var actual = obtenerMetaDiaria();
+  var nueva = prompt('¿Cuántas notas por temática querés publicar por día?', actual);
+  if (nueva === null) return;
+  var n = parseInt(nueva, 10);
+  if (!n || n < 1) return;
+  localStorage.setItem('mdp_meta_diaria', n);
+  cargarProgresoDeHoy();
+}
+
+function renderProgresoDeHoy(conteos) {
+  var meta = obtenerMetaDiaria();
+  var box = document.getElementById('progreso-hoy');
+  var html = Object.keys(CATEGORIA_LABELS).map(function(slug) {
+    var n = conteos[slug] || 0;
+    var listo = n >= meta;
+    var cls = listo ? 'ph-listo' : (n > 0 ? 'ph-falta' : '');
+    return '<span class="ph-item ' + cls + '">' + CATEGORIA_LABELS[slug] + ': ' + n + '/' + meta + (listo ? ' ✓' : '') + '</span>';
+  }).join('');
+  html += '<button type="button" class="ph-meta" onclick="editarMetaDiaria()">✎ meta: ' + meta + ' por temática</button>';
+  box.innerHTML = html;
+  box.style.display = 'flex';
+}
+
 function mostrarNotasPublicadas(notas) {
   document.getElementById('n-count').textContent = notas.length + ' notas publicadas';
   if(!notas.length) {
@@ -2117,6 +2195,11 @@ function ejecutarPublicacion() {
 
     notaEditando = null;
     document.querySelector('.layout').classList.remove('modo-edicion');
+    // Si el usuario ya tenia abierto el contador de "Progreso de hoy", lo
+    // actualizamos solo despues de cada nota NUEVA (no en ediciones), para que
+    // vaya viendo en vivo cuanto le falta de cada tematica sin tener que
+    // acordarse de apretar el boton de nuevo.
+    if (!esEdicion && window._progresoHoyCargado) cargarProgresoDeHoy();
     var redes = [debePublicarFb ? 'Facebook' : null, debePublicarIg ? 'Instagram' : null].filter(Boolean).join(' + ');
     if(colaActiva) {
       colaPos++;
