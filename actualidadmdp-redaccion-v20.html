@@ -1137,6 +1137,10 @@ function generarTextoParaNoticia(noticia) {
       '5. Tenes PROHIBIDO usar estas frases o variantes muy parecidas (en cualquier conjugacion) en el texto que redactes vos: ' + FRASES_PROHIBIDAS.concat(PATRONES_PROHIBIDOS.map(function(p){return p.etiqueta;})).map(function(f){return '"'+f+'"';}).join(', ') + '. Esta prohibicion NO aplica dentro de una cita textual entre comillas -- si la persona citada uso alguna de esas frases, la cita va tal cual la dijo, sin modificarla.\n' +
       '6. No copies frases enteras textuales de la lista salvo que sea una cita entre comillas de una persona (esa si va textual).\n' +
       '7. Nunca escribas comentarios sobre la fuente ni marcadores como "[texto incompleto]", "[dato faltante]" o similares dentro de la nota -- si algo esta incompleto o falta, directamente no lo menciones.\n\n' +
+      'REGLAS LEGALES Y ETICAS (aplican solo si la noticia trata de un hecho policial, judicial o delictivo -- en cualquier otro tema, ignora esta seccion):\n' +
+      '8. Presuncion de inocencia: usa siempre "aprehendido", "imputado", "investigado" o "sospechoso". Prohibido usar "culpable", "asesino", "estafador" o similares salvo que la lista indique explicitamente que ya hay una condena o sentencia firme.\n' +
+      '9. Usa el condicional ("habria ingresado", "seria el autor") para cualquier version, testimonio o dato que la lista presente como no confirmado, no peritado o atribuido a "fuentes" sin identificar -- no lo redactes como un hecho consumado.\n' +
+      '10. Proteccion de menores: si algun dato de la lista revela el nombre, apellido, apodo, direccion o cualquier dato que permita identificar a un menor de 18 anos involucrado en un hecho delictivo o de vulnerabilidad, NO lo incluyas en la nota aunque figure en la lista -- referite a esa persona de forma generica (ej. "un adolescente", "un menor").\n\n' +
       'LISTA DE DATOS:\n' + listaDatos + '\n\nResponde SOLO con el texto final de la nota. Sin titulo, sin aclaraciones, sin repetir la lista.';
 
     return llamarIA(promptRedaccion).then(function(texto) {
