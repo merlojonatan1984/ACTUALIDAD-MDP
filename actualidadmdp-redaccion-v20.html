@@ -1200,7 +1200,9 @@ function generarTextoParaNoticia(noticia) {
       '12. No uses adjetivos de juicio de valor ("terrible", "impactante", "increible", "aberrante") ni abuses de adverbios terminados en "-mente" -- describi con los datos concretos de la lista, no con calificativos.\n' +
       '13. Numeros del cero al nueve escribilos en letras, del 10 en adelante en cifras (ej. "ocho allanamientos", "14 detenidos"), salvo que se trate de una cifra de dinero, hora o porcentaje, que siempre van en numeros. Los montos de dinero llevan el simbolo pegado al numero y punto para los miles (ej. "$150.000", "US$2.500"). Los horarios en formato de 24 horas (ej. "14:30", "a las 8 hs").\n' +
       '14. Si usas una cita textual entre comillas, atribuisela a quien la dijo (su nombre, no un grupo generico como "los prestadores" o "las entidades") la PRIMERA vez que aparece, y usa esa misma cita UNA SOLA VEZ en toda la nota -- nunca la repitas mas adelante, ni la muestres primero sin atribucion y recien despues con el nombre de quien la dijo.\n' +
-      '15. Al meter una fecha, cifra o dato puntual dentro de una oracion, hacelo de forma que suene como habla una persona real -- evita construcciones forzadas como "el planteo llego al 25 de agosto sin resolucion". Preferi algo natural como "hasta el 25 de agosto, el reclamo seguia sin respuesta" o "el 25 de agosto, [dato], todavia no se habia resuelto".\n\n' +
+      '15. Al meter una fecha, cifra o dato puntual dentro de una oracion, hacelo de forma que suene como habla una persona real -- evita construcciones forzadas como "el planteo llego al 25 de agosto sin resolucion". Preferi algo natural como "hasta el 25 de agosto, el reclamo seguia sin respuesta" o "el 25 de agosto, [dato], todavia no se habia resuelto".\n' +
+      '16. El primer parrafo va envuelto en negrita markdown (asi: **texto**) y funciona como bajada -- 1 o 2 oraciones cortas que resuman el dato mas importante (que/quien/cuando), a modo de resumen antes de que el desarrollo empiece en el segundo parrafo. El resto de la nota va en texto normal, sin negrita.\n' +
+      '17. Si la nota incluye una lista larga (una nomina de personas, un cronograma, un listado de precios, etc.), anteponele un subtitulo corto en markdown (### Subtitulo) para separar esa seccion del resto del texto, en vez de dejar la lista pegada al parrafo anterior.\n\n' +
       'LISTA DE DATOS:\n' + listaDatos + '\n\nResponde SOLO con el texto final de la nota. Sin titulo, sin aclaraciones, sin repetir la lista.';
 
     return llamarIA(promptRedaccion).then(function(texto) {
@@ -1600,7 +1602,10 @@ function yamlEscape(str) {
 // (resumen completo, sin puntos suspensivos). Si no, corta en la ultima
 // palabra entera y agrega "…" para dejar claro que sigue.
 function resumirTexto(texto, maxLen) {
-  var limpio = texto.replace(/\s+/g, ' ').trim();
+  // El texto puede traer markdown (negrita en el primer parrafo, algun ###
+  // subtitulo si hay una lista) -- para SEO/redes hace falta texto plano, sin
+  // asteriscos ni numerales sueltos.
+  var limpio = texto.replace(/\*\*/g, '').replace(/^#+\s*/gm, '').replace(/\s+/g, ' ').trim();
   if (limpio.length <= maxLen) return limpio;
   var corte = limpio.substring(0, maxLen);
   var ultimoPunto = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('.\n'));
