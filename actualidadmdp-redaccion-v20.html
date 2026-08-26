@@ -1834,17 +1834,27 @@ function confirmarYPublicar() {
 // Publica el link como comentario aparte, no en el posteo -- Facebook le baja el alcance
 // a los posteos que tienen un link visible en el texto principal. Mismo truco que ya usa
 // Esto No Esta Sucediendo.
-function comentarLinkEnFacebook(respuestaPublicacion, texto) {
-  var token = getFacebookToken();
-  if(!token || !respuestaPublicacion) return Promise.resolve(null);
-  var id = respuestaPublicacion.post_id || respuestaPublicacion.id;
-  if(!id) return Promise.resolve(null);
+// A veces Facebook tarda unos segundos en "activar" un posteo recien creado, y
+// comentar de inmediato falla solo por eso (no por un problema real) -- se
+// reintenta una vez despues de una pausa antes de darse por vencido.
+function intentarComentarLinkEnFacebook(id, token, texto) {
   var body = new URLSearchParams();
   body.set('message', texto);
   body.set('access_token', token);
   return fetch('https://graph.facebook.com/v21.0/' + id + '/comments', { method: 'POST', body: body })
     .then(function(r) { return r.json(); })
     .then(function(d) { if(d.error) throw new Error(d.error.message); return d; });
+}
+
+function comentarLinkEnFacebook(respuestaPublicacion, texto) {
+  var token = getFacebookToken();
+  if(!token || !respuestaPublicacion) return Promise.resolve(null);
+  var id = respuestaPublicacion.post_id || respuestaPublicacion.id;
+  if(!id) return Promise.resolve(null);
+  return intentarComentarLinkEnFacebook(id, token, texto).catch(function() {
+    return new Promise(function(resolve) { setTimeout(resolve, 4000); })
+      .then(function() { return intentarComentarLinkEnFacebook(id, token, texto); });
+  });
 }
 
 function publicarEnFacebook(fuente, caption, esBlob) {
@@ -2157,13 +2167,21 @@ function ejecutarPublicacion() {
         crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt).then(function(blob) {
           if(debePublicarFb) {
             publicarEnFacebook(blob, captionFb, true).then(function(resp) {
-              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).catch(function(e) { console.error('No se pudo comentar el link en Facebook:', e); });
-              setStatus('✓ Compartido en Facebook: ' + titulo, 'ok');
+              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).then(function() {
+                setStatus('✓ Compartido en Facebook con el link comentado: ' + titulo, 'ok');
+              }).catch(function(e) {
+                console.error('No se pudo comentar el link en Facebook:', e);
+                setStatus('⚠️ Se publicó en Facebook pero el link NO se pudo comentar solo ("' + titulo + '"). Agregalo vos a mano como comentario en el posteo: ' + urlNota, 'err');
+              });
             }).catch(function(e) {
               console.error('No se pudo armar la plantilla, se publica la foto sin marco:', e);
               publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function(resp) {
-                comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).catch(function(e3) { console.error('No se pudo comentar el link en Facebook:', e3); });
-                setStatus('✓ Compartido en Facebook SIN la plantilla (revisá la consola): ' + titulo, 'err');
+                comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).then(function() {
+                  setStatus('✓ Compartido en Facebook SIN la plantilla, con el link comentado: ' + titulo, 'ok');
+                }).catch(function(e3) {
+                  console.error('No se pudo comentar el link en Facebook:', e3);
+                  setStatus('⚠️ Se publicó en Facebook SIN la plantilla y el link NO se pudo comentar solo ("' + titulo + '"). Agregalo vos a mano como comentario: ' + urlNota, 'err');
+                });
               }).catch(function(e2) {
                 setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
               });
@@ -2179,9 +2197,13 @@ function ejecutarPublicacion() {
         }).catch(function(e) {
           if(debePublicarFb) {
             publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function(resp) {
-              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).catch(function(e3) { console.error('No se pudo comentar el link en Facebook:', e3); });
-              setStatus('✓ Compartido en Facebook SIN la plantilla (revisá la consola): ' + titulo, 'err');
               console.error('No se pudo armar la plantilla:', e);
+              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).then(function() {
+                setStatus('✓ Compartido en Facebook SIN la plantilla, con el link comentado: ' + titulo, 'err');
+              }).catch(function(e3) {
+                console.error('No se pudo comentar el link en Facebook:', e3);
+                setStatus('⚠️ Se publicó en Facebook SIN la plantilla y el link NO se pudo comentar solo ("' + titulo + '"). Agregalo vos a mano como comentario: ' + urlNota, 'err');
+              });
             }).catch(function(e2) {
               setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
             });
