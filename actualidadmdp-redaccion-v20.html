@@ -60,6 +60,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .pf-titulo{font-size:12.5px;font-weight:700;color:var(--navy);line-height:1.4;margin-bottom:14px}
 .pf-btn{display:block;text-align:center;background:var(--navy);color:#fff;border-radius:5px;padding:8px 10px;font-size:11px;font-weight:700;text-decoration:none}
 .pf-btn:hover{background:var(--accent)}
+.pf-pegar{margin-top:10px;font-size:11px}
+.pf-pegar summary{cursor:pointer;color:var(--navy);font-weight:700;padding:4px 0}
+.pf-pegar textarea{width:100%;box-sizing:border-box;margin-top:6px;min-height:100px;font-size:11px;font-family:inherit;padding:8px;border:1px solid var(--border);border-radius:5px;resize:vertical}
 .pf-item{font-size:11px;color:var(--muted);padding:7px 0;border-top:1px solid var(--border);line-height:1.4}
 .pf-item-actual{color:var(--navy);font-weight:700}
 .pf-datos{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
@@ -297,6 +300,10 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <div class="pf-medio" id="pf-medio"></div>
     <div class="pf-titulo" id="pf-titulo"></div>
     <a class="pf-btn" id="pf-link" href="#" target="_blank">🔗 Abrir noticia original</a>
+    <details class="pf-pegar">
+      <summary>📋 Pegar texto completo (si la fuente es corta)</summary>
+      <textarea id="e-texto-fuente-completo" placeholder="Si el resumen de esta fuente es muy corto (pasa seguido con BBC), pegá acá el texto completo del artículo original. Se va a usar ese texto en vez del resumen corto al generar la nota con IA."></textarea>
+    </details>
     <div id="pf-lista"></div>
     <div class="pf-datos" id="pf-datos" style="display:none">
       <div class="pf-label" style="margin-bottom:8px">🔎 Datos que detectó la IA en la fuente</div>
@@ -513,8 +520,10 @@ function procesarSiguienteEnCola() {
   document.getElementById('e-sec').value = item.cat;
   document.getElementById('e-texto').value = '';
   document.getElementById('e-tits').value = '';
+  document.getElementById('e-texto-fuente-completo').value = '';
   document.getElementById('img-box').style.display = 'none';
   mostrarAvisosIA(null);
+  mostrarAvisoFuente(null);
   mostrarDatosExtraidos(null);
   resetImagenManual();
   wc();
@@ -1046,8 +1055,10 @@ function seleccionar(i) {
   document.getElementById('e-sec').value = noticiaActual.cat;
   document.getElementById('e-texto').value = '';
   document.getElementById('e-tits').value = '';
+  document.getElementById('e-texto-fuente-completo').value = '';
   document.getElementById('img-box').style.display = 'none';
   mostrarAvisosIA(null);
+  mostrarAvisoFuente(null);
   mostrarDatosExtraidos(null);
   resetImagenManual();
   wc();
@@ -1288,14 +1299,19 @@ function generarConIA() {
   mostrarAvisoFuente(null);
   mostrarDatosExtraidos(null);
   setStatus('Generando nota con IA...', 'loading');
-  generarTextoParaNoticia(noticiaActual).then(function(res) {
+  // Si el usuario pego el texto completo a mano (fuente corta tipo RSS de BBC),
+  // usamos eso en vez del resumen corto que trae la noticia por defecto -- sin
+  // tocar noticiaActual, para no perder el link/titulo/fecha originales.
+  var textoPegado = document.getElementById('e-texto-fuente-completo').value.trim();
+  var noticiaParaGenerar = textoPegado ? Object.assign({}, noticiaActual, { desc: textoPegado }) : noticiaActual;
+  generarTextoParaNoticia(noticiaParaGenerar).then(function(res) {
     if(res && res.texto) {
       document.getElementById('e-texto').value = res.texto;
       wc();
     }
     mostrarDatosExtraidos(res ? res.listaDatos : null);
     mostrarAvisosIA(res ? res.avisos : null);
-    mostrarAvisoFuente(noticiaActual.desc);
+    mostrarAvisoFuente(noticiaParaGenerar.desc);
     if (res && res.avisos && res.avisos.length) {
       setStatus('Nota generada con avisos -- revisa el cartel amarillo antes de publicar.', 'err');
     } else {
@@ -2133,6 +2149,7 @@ function limpiar() {
   document.getElementById('e-titulo').value = '';
   document.getElementById('e-texto').value = '';
   document.getElementById('e-tits').value = '';
+  document.getElementById('e-texto-fuente-completo').value = '';
   document.getElementById('e-sec').value = 'la-ciudad';
   document.getElementById('wc').textContent = '0 palabras';
   if (document.getElementById('e-texto-ig')) {
