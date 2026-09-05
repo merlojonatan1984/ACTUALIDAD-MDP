@@ -308,10 +308,14 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <button class="btn-upd" id="btn-horoscopo" onclick="actualizarHoroscopo()" style="background:#7c3aed">
     🔮 Actualizar horóscopo
   </button>
+  <button class="btn-upd" id="btn-reformatear" onclick="reformatearTodasLasNotas()" style="background:#B9860A">
+    🔧 Reformatear notas anteriores
+  </button>
   <span class="n-count" id="n-count"></span>
 </div>
 
 <div class="progreso-hoy" id="progreso-hoy" style="display:none"></div>
+<div class="progreso-hoy" id="reformateo-status" style="display:none"></div>
 
 <div class="layout">
   <div class="left" id="left-panel">
@@ -1713,6 +1717,102 @@ function verNotasPublicadas() {
   }).catch(function(e) {
     setStatus('Error cargando notas publicadas: ' + e.message, 'err');
     document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-t">Error al cargar</div><div class="empty-s">' + e.message + '</div></div>';
+  });
+}
+
+// ===== Reformatear notas anteriores (negrita + tablas) =====
+// Las notas publicadas ANTES de agregar el estilo nuevo (reglas 16b/17b del
+// prompt de redaccion) se pegaron con texto plano, sin negrita real ni tablas
+// markdown -- se ve como texto corrido en la web. Esto las recorre una por una,
+// le pide a la IA que agregue SOLO formato (negrita + tablas), nunca que
+// reescriba o invente contenido, y las vuelve a subir a GitHub.
+
+function separarFrontmatter(contenido) {
+  var m = contenido.match(/^(---\n[\s\S]*?\n---\n)([\s\S]*)$/);
+  if (!m) return { frontmatter: '', body: contenido };
+  return { frontmatter: m[1], body: m[2] };
+}
+
+function contarPalabras(texto) {
+  return (texto.match(/[a-zA-ZÀ-ÿ0-9]+/g) || []).length;
+}
+
+// Chequeo de seguridad: si la IA "reformatea" pero en el camino borra o
+// inventa una porcion grande de texto, la cantidad de palabras (ignorando
+// simbolos de markdown que agrega) tiene que quedar parecida a la original.
+function difiereMuchoEnPalabras(original, reformateado) {
+  var limpio = reformateado.replace(/\*\*/g, '').replace(/\|/g, ' ').replace(/^#+\s*/gm, '').replace(/^-+$/gm, '');
+  var pOriginal = contarPalabras(original);
+  var pNuevo = contarPalabras(limpio);
+  if (pOriginal === 0) return false;
+  var diff = Math.abs(pNuevo - pOriginal) / pOriginal;
+  return diff > 0.15;
+}
+
+function promptReformatearEstilo(textoBody) {
+  return 'Tenes el texto completo de una nota periodistica YA PUBLICADA. Tu UNICA tarea es agregarle formato Markdown, sin cambiar una sola palabra del contenido, sin agregar ni quitar informacion, sin reescribir oraciones, sin cambiar el orden de los parrafos.\n\n' +
+    'Hace SOLO estos dos cambios:\n' +
+    '1. Agrega negrita markdown (**asi**) a los datos mas importantes de cada parrafo -- nombres propios, cifras, fechas, el resultado o la decision central. De 1 a 3 fragmentos en negrita por parrafo, no mas. Si el primer parrafo ya esta completo en negrita (es la bajada), dejalo tal cual esta.\n' +
+    '2. Si encontras una lista de datos tabulares escrita como texto plano, con tabulaciones o espacios (una tabla de posiciones, precios, cronograma), convertila a una tabla real en markdown (con | separando columnas y una fila de guiones debajo del encabezado). Si es una lista comun que no es tabular, dejala como esta.\n\n' +
+    'PROHIBIDO: reescribir oraciones, cambiar palabras por sinonimos, agregar transiciones o datos nuevos, sacar parrafos. El unico cambio permitido es agregar ** para negrita y convertir listas tabulares en tablas.\n\n' +
+    'TEXTO:\n' + textoBody + '\n\nResponde SOLO con el texto reformateado, sin explicaciones ni comentarios.';
+}
+
+function reformatearUnaNota(file) {
+  return githubGetFile(file.path).then(function(data) {
+    var contenido = base64ToUtf8(data.content);
+    var partes = separarFrontmatter(contenido);
+    if (!partes.frontmatter) return { path: file.path, ok: false, motivo: 'no se encontro frontmatter' };
+    return llamarIA(promptReformatearEstilo(partes.body)).then(function(bodyNuevo) {
+      if (difiereMuchoEnPalabras(partes.body, bodyNuevo)) {
+        return { path: file.path, ok: false, motivo: 'la cantidad de palabras cambio demasiado, se salteo por seguridad' };
+      }
+      var contenidoNuevo = partes.frontmatter + '\n' + bodyNuevo.trim() + '\n';
+      return githubPutFile(file.path, utf8ToBase64(contenidoNuevo), 'Reformatear estilo: ' + file.path, data.sha).then(function() {
+        return { path: file.path, ok: true };
+      });
+    });
+  }).catch(function(e) {
+    return { path: file.path, ok: false, motivo: e.message };
+  });
+}
+
+function reformatearTodasLasNotas() {
+  var token = getGithubToken();
+  if(!token) { showModal(); setStatus('Ingresa tu token de GitHub primero.', 'err'); return; }
+  if(!confirm('Esto va a revisar TODAS las notas ya publicadas y actualizar las que le falten negrita/tablas. Puede tardar varios minutos y usa creditos de la API de Claude. ¿Continuar?')) return;
+
+  var box = document.getElementById('reformateo-status');
+  box.style.display = 'flex';
+  box.innerHTML = '<span>⏳ Buscando notas publicadas...</span>';
+  document.getElementById('btn-reformatear').disabled = true;
+
+  githubGetFile('src/content/posts').then(function(files) {
+    var mdFiles = (Array.isArray(files) ? files : []).filter(function(f) { return f.name && f.name.slice(-3) === '.md'; });
+    var total = mdFiles.length;
+    var ok = 0, saltadas = 0, errores = [];
+
+    function procesarSiguiente(i) {
+      if (i >= total) {
+        box.innerHTML = '<span>✅ Listo: ' + ok + ' actualizadas, ' + saltadas + ' salteadas de ' + total + '.' +
+          (errores.length ? ' Revisa la consola para el detalle de las salteadas.' : '') + '</span>';
+        if (errores.length) console.warn('Notas salteadas al reformatear:', errores);
+        document.getElementById('btn-reformatear').disabled = false;
+        return;
+      }
+      box.innerHTML = '<span>⏳ Procesando ' + (i + 1) + '/' + total + ': ' + mdFiles[i].name + '</span>';
+      reformatearUnaNota(mdFiles[i]).then(function(res) {
+        if (res.ok) { ok++; } else { saltadas++; errores.push(res.path + ' -- ' + res.motivo); }
+        return esperar(800);
+      }).then(function() {
+        procesarSiguiente(i + 1);
+      });
+    }
+
+    procesarSiguiente(0);
+  }).catch(function(e) {
+    box.innerHTML = '<span>Error: ' + e.message + '</span>';
+    document.getElementById('btn-reformatear').disabled = false;
   });
 }
 
