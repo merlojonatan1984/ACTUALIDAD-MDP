@@ -2293,17 +2293,6 @@ function recortarTitulo(titulo) {
   return t;
 }
 
-// El texto completo de la noticia ya va en el copete de la publicacion --
-// en la imagen no hace falta poner el titulo entero, alcanza con una version
-// corta y con gancho (menos texto = letra mas grande = se lee mejor en el
-// feed). Nos quedamos con las primeras 7 palabras como maximo.
-function tituloParaImagen(titulo) {
-  var base = recortarTitulo(titulo);
-  var palabras = base.split(/\s+/).filter(Boolean);
-  if (palabras.length <= 7) return base;
-  return palabras.slice(0, 7).join(' ');
-}
-
 // SIN TOCAR -- esta es la plantilla que ya usan la publicacion automatica en
 // Facebook y la publicacion via API en Instagram (publicarEnInstagram). Queda
 // exactamente como estaba antes de esta conversacion.
@@ -2416,7 +2405,10 @@ function crearImagenInstagram(imagenSrc, titulo) {
           ctx.fillStyle = grad;
           ctx.fillRect(0, gradTop, SW, SH - gradTop);
 
-          var margenSeguro = 130;
+          // Se probo en la grilla real del perfil de Instagram con 130px de margen
+          // (9%) y el logo se seguia cortando -- se sube a 200px (14%) para tener
+          // bastante mas colchon.
+          var margenSeguro = 200;
           var logoBaselineY = SH - margenSeguro;
           ctx.font = '800 28px "Source Sans 3"';
           var anchoActualidad = ctx.measureText('ACTUALIDAD').width;
@@ -2436,7 +2428,12 @@ function crearImagenInstagram(imagenSrc, titulo) {
           ctx.textAlign = 'center';
           ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 7);
 
-          var tituloRecortado = tituloParaImagen(titulo).toUpperCase();
+          // Cortar a una cantidad fija de palabras rompia la frase a mitad de
+          // una idea (ej. "...COLAPINTO DESDE" sin el "que llego a la F1").
+          // Se usa el titulo completo (solo recortado en los dos puntos si los
+          // tiene) y se deja que el sistema de tamanos de letra decrecientes lo
+          // acomode en hasta 5 renglones -- ya probado con titulos larguisimos.
+          var tituloRecortado = recortarTitulo(titulo).toUpperCase();
           var maxAnchoTitulo = SW - 220;
           var tamanosTitulo = [64, 56, 48, 42, 36];
           var fontSizeElegido = tamanosTitulo[tamanosTitulo.length - 1];
