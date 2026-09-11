@@ -2263,69 +2263,73 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           canvas.width = SW; canvas.height = SH;
           var ctx = canvas.getContext('2d');
 
-          // Volvimos a este diseño (foto enmarcada + tarjeta blanca) despues de
-          // probar el de "foto completa + titulo superpuesto" en Instagram de
-          // verdad: en la grilla del perfil el titulo quedaba cortado en los
-          // bordes porque el texto llegaba muy cerca del borde de la imagen. Este
-          // diseño deja mas margen de seguridad en los 4 lados (90px o mas), asi
-          // que aunque la grilla recorte de forma distinta a como dice la
-          // documentacion, el texto no llega nunca al borde.
-          ctx.fillStyle = '#0d2340';
-          ctx.fillRect(0, 0, SW, SH);
+          // Foto completa + titulo superpuesto (estilo La Nacion / LA 100), sin
+          // marco ni tarjeta blanca. La primera version de este diseño tenia el
+          // texto muy cerca del borde inferior (solo 60px) y en la grilla del
+          // perfil de Instagram quedaba cortado -- el recorte real de la grilla
+          // no coincide exactamente con lo que documenta Instagram, asi que ahora
+          // se deja una zona segura mucho mas generosa: 130px minimo desde
+          // cualquier borde para el logo, y el titulo nunca baja de esa linea.
+          dibujarImagenCover(ctx, img, 0, 0, SW, SH);
 
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '800 42px "Source Sans 3"';
-          ctx.textAlign = 'left';
-          ctx.textBaseline = 'alphabetic';
-          ctx.fillText('ACTUALIDAD', 90, 116);
+          var gradTop = SH * 0.40;
+          var grad = ctx.createLinearGradient(0, gradTop, 0, SH);
+          grad.addColorStop(0, 'rgba(5,15,30,0)');
+          grad.addColorStop(0.5, 'rgba(5,15,30,0.75)');
+          grad.addColorStop(1, 'rgba(5,15,30,0.95)');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, gradTop, SW, SH - gradTop);
+
+          // Logo centrado, con 130px de zona segura desde el borde inferior.
+          var margenSeguro = 130;
+          var logoBaselineY = SH - margenSeguro;
+          ctx.font = '800 28px "Source Sans 3"';
           var anchoActualidad = ctx.measureText('ACTUALIDAD').width;
-
-          var bubbleXLogo = 90 + anchoActualidad + 14, bubbleYLogo = 72, bubbleWLogo = 123, bubbleHLogo = 46;
-          ctx.fillStyle = '#29abe2';
-          rectRedondeado(ctx, bubbleXLogo, bubbleYLogo, bubbleWLogo, bubbleHLogo, 10);
-          ctx.fill();
-          ctx.fillStyle = '#ffffff';
-          ctx.font = '800 32px "Source Sans 3"';
-          ctx.textAlign = 'center';
-          ctx.fillText('MDP', bubbleXLogo + bubbleWLogo / 2, bubbleYLogo + bubbleHLogo / 2 + 11);
-
-          var ix = 90, iy = 160, iw = SW - 180, ih = 780;
-          ctx.save();
-          rectRedondeado(ctx, ix, iy, iw, ih, 16);
-          ctx.clip();
-          dibujarImagenCover(ctx, img, ix, iy, iw, ih);
-          ctx.restore();
-
-          // Solo logo + titulo (sin bajada) -- probamos varios tamanos de letra,
-          // de mas grande a mas chico, hasta encontrar uno que entre completo en
-          // 5 renglones sin cortar el titulo con "...".
-          var cx = 90, cy = 990, cw = SW - 180, ch = 350;
-          ctx.fillStyle = '#ffffff';
-          rectRedondeado(ctx, cx, cy, cw, ch, 24);
-          ctx.fill();
-
+          var bubbleW = 92, bubbleH = 36, gapLogo = 10;
+          var totalLogoW = anchoActualidad + gapLogo + bubbleW;
+          var logoStartX = (SW - totalLogoW) / 2;
           ctx.textAlign = 'left';
           ctx.textBaseline = 'alphabetic';
-          ctx.fillStyle = '#33363b';
-          var tituloRecortado = recortarTitulo(titulo);
-          var tamanosTitulo = [44, 40, 36, 32, 28];
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText('ACTUALIDAD', logoStartX, logoBaselineY);
+          var bubbleX = logoStartX + anchoActualidad + gapLogo, bubbleY = logoBaselineY - bubbleH + 8;
+          ctx.fillStyle = '#29abe2';
+          rectRedondeado(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 9);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '800 22px "Source Sans 3"';
+          ctx.textAlign = 'center';
+          ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 7);
+
+          // Titulo centrado, en mayuscula, con 110px de zona segura a cada lado
+          // (ancho maximo de texto = SW - 220, contra SW - 140 de la version
+          // anterior) -- probamos varios tamanos de letra hasta que entre
+          // completo en 5 renglones sin cortar con "...".
+          var tituloRecortado = recortarTitulo(titulo).toUpperCase();
+          var maxAnchoTitulo = SW - 220;
+          var tamanosTitulo = [48, 44, 38, 34, 30];
           var fontSizeElegido = tamanosTitulo[tamanosTitulo.length - 1];
           var lineasTitulo = [];
+          ctx.textAlign = 'center';
           for (var ti = 0; ti < tamanosTitulo.length; ti++) {
             ctx.font = '800 ' + tamanosTitulo[ti] + 'px "Source Sans 3"';
-            lineasTitulo = envolverTexto(ctx, tituloRecortado, cw - 80, 5, '…');
+            lineasTitulo = envolverTexto(ctx, tituloRecortado, maxAnchoTitulo, 5, '…');
             fontSizeElegido = tamanosTitulo[ti];
             var ultimaLinea = lineasTitulo[lineasTitulo.length - 1] || '';
             if (ultimaLinea.indexOf('…') === -1) break;
           }
           ctx.font = '800 ' + fontSizeElegido + 'px "Source Sans 3"';
-          var lineHeight = fontSizeElegido + 16;
-          var bloqueAltura = lineasTitulo.length * lineHeight;
-          var ty = cy + (ch - bloqueAltura) / 2 + fontSizeElegido * 0.75;
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = 'rgba(0,0,0,0.55)';
+          ctx.shadowBlur = 14;
+          var lineHeight = fontSizeElegido + 14;
+          var tituloAbajo = bubbleY - 50;
+          var ty = tituloAbajo - (lineasTitulo.length - 1) * lineHeight;
           lineasTitulo.forEach(function(linea) {
-            ctx.fillText(linea, cx + 40, ty);
+            ctx.fillText(linea, SW / 2, ty);
             ty += lineHeight;
           });
+          ctx.shadowBlur = 0;
 
           canvas.toBlob(function(blob) {
             if(blob) resolve(blob); else reject(new Error('No se pudo generar la imagen de Facebook'));
