@@ -2434,8 +2434,8 @@ function crearImagenInstagram(imagenSrc, titulo) {
           // tiene) y se deja que el sistema de tamanos de letra decrecientes lo
           // acomode en hasta 5 renglones -- ya probado con titulos larguisimos.
           var tituloRecortado = recortarTitulo(titulo).toUpperCase();
-          var maxAnchoTitulo = SW - 220;
-          var tamanosTitulo = [54, 48, 42, 38, 34];
+          var maxAnchoTitulo = SW - 260;
+          var tamanosTitulo = [46, 42, 38, 34, 30];
           var fontSizeElegido = tamanosTitulo[tamanosTitulo.length - 1];
           var lineasTitulo = [];
           ctx.textAlign = 'center';
