@@ -2249,13 +2249,17 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
       img.crossOrigin = 'anonymous';
       img.onload = function() {
         try {
-          var S = 1080;
+          // Instagram dejo de usar el formato cuadrado (1:1) como estandar -- desde
+          // 2025/2026 tanto el feed como la nueva grilla vertical del perfil muestran
+          // sin ningun recorte el formato nativo 3:4 (1080x1440). Publicar en 1:1 hace
+          // que Instagram recorte o reencuadre la imagen de forma impredecible.
+          var SW = 1080, SH = 1440;
           var canvas = document.createElement('canvas');
-          canvas.width = S; canvas.height = S;
+          canvas.width = SW; canvas.height = SH;
           var ctx = canvas.getContext('2d');
 
           ctx.fillStyle = '#0d2340';
-          ctx.fillRect(0, 0, S, S);
+          ctx.fillRect(0, 0, SW, SH);
 
           ctx.fillStyle = '#ffffff';
           ctx.font = '800 42px "Source Sans 3"';
@@ -2273,14 +2277,14 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           ctx.textAlign = 'center';
           ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 11);
 
-          var ix = 70, iy = 140, iw = 940, ih = 630;
+          var ix = 70, iy = 140, iw = 940, ih = 945;
           ctx.save();
           rectRedondeado(ctx, ix, iy, iw, ih, 16);
           ctx.clip();
           dibujarImagenCover(ctx, img, ix, iy, iw, ih);
           ctx.restore();
 
-          var cx = 70, cy = 735, cw = 940, ch = 280;
+          var cx = 70, cy = 1100, cw = 940, ch = 280;
           ctx.fillStyle = '#ffffff';
           rectRedondeado(ctx, cx, cy, cw, ch, 24);
           ctx.fill();
