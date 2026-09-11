@@ -2244,6 +2244,17 @@ function recortarTitulo(titulo) {
   return t;
 }
 
+// El texto completo de la noticia ya va en el copete de la publicacion --
+// en la imagen no hace falta poner el titulo entero, alcanza con una version
+// corta y con gancho (menos texto = letra mas grande = se lee mejor en el
+// feed). Nos quedamos con las primeras 7 palabras como maximo.
+function tituloParaImagen(titulo) {
+  var base = recortarTitulo(titulo);
+  var palabras = base.split(/\s+/).filter(Boolean);
+  if (palabras.length <= 7) return base;
+  return palabras.slice(0, 7).join(' ');
+}
+
 function crearImagenFacebook(imagenSrc, titulo, excerpt) {
   return Promise.all([
     document.fonts.load('800 44px "Source Sans 3"'),
@@ -2305,9 +2316,9 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           // (ancho maximo de texto = SW - 220, contra SW - 140 de la version
           // anterior) -- probamos varios tamanos de letra hasta que entre
           // completo en 5 renglones sin cortar con "...".
-          var tituloRecortado = recortarTitulo(titulo).toUpperCase();
+          var tituloRecortado = tituloParaImagen(titulo).toUpperCase();
           var maxAnchoTitulo = SW - 220;
-          var tamanosTitulo = [48, 44, 38, 34, 30];
+          var tamanosTitulo = [64, 56, 48, 42, 36];
           var fontSizeElegido = tamanosTitulo[tamanosTitulo.length - 1];
           var lineasTitulo = [];
           ctx.textAlign = 'center';
