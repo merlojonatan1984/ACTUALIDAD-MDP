@@ -2184,7 +2184,8 @@ function dibujarImagenCover(ctx, img, x, y, w, h) {
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
-function envolverTexto(ctx, texto, maxAncho, maxLineas) {
+function envolverTexto(ctx, texto, maxAncho, maxLineas, marcaCorte) {
+  marcaCorte = marcaCorte || '…';
   var palabras = texto.split(/\s+/).filter(Boolean);
   var lineas = [];
   var actual = '';
@@ -2206,29 +2207,29 @@ function envolverTexto(ctx, texto, maxAncho, maxLineas) {
   var truncado = idx < palabras.length;
   if(truncado && lineas.length) {
     var ultima = lineas[lineas.length - 1];
-    while(ctx.measureText(ultima + '…').width > maxAncho && ultima.length > 1) {
+    while(ctx.measureText(ultima + marcaCorte).width > maxAncho && ultima.length > 1) {
       ultima = ultima.slice(0, -1).trim();
     }
-    lineas[lineas.length - 1] = ultima + '…';
+    lineas[lineas.length - 1] = ultima + marcaCorte;
   }
   return lineas;
 }
 
-function ajustarTitulo(ctx, titulo, maxAncho, maxLineas) {
-  var tamanos = [56, 48, 42, 36];
-  for(var i = 0; i < tamanos.length; i++) {
-    ctx.font = '800 ' + tamanos[i] + 'px "Source Sans 3"';
-    var lineas = envolverTexto(ctx, titulo, maxAncho, maxLineas);
-    var ultima = lineas[lineas.length - 1] || '';
-    if(i === tamanos.length - 1 || ultima.indexOf('…') === -1) {
-      return { fontSize: tamanos[i], lineas: lineas };
-    }
-  }
+// Si el titulo tiene ':', corta ahi (no arrastra la segunda parte de la
+// frase y despues la corta a mitad de palabra) -- salvo que el pedazo
+// antes de los ':' sea muy corto (ej. "Video: ..."), ahi se deja como esta.
+// Misma regla que usa el flujo automatico de n8n, para que ambas vias den
+// el mismo resultado.
+function recortarTitulo(titulo) {
+  var t = titulo;
+  var pos = t.indexOf(':');
+  if(pos >= 15) t = t.slice(0, pos).trim();
+  return t;
 }
 
 function crearImagenFacebook(imagenSrc, titulo, excerpt) {
   return Promise.all([
-    document.fonts.load('800 42px "Source Sans 3"'),
+    document.fonts.load('800 44px "Source Sans 3"'),
     document.fonts.load('600 26px "Source Sans 3"')
   ]).catch(function() {}).then(function() {
     return new Promise(function(resolve, reject) {
@@ -2241,20 +2242,18 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           canvas.width = S; canvas.height = S;
           var ctx = canvas.getContext('2d');
 
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, S, S);
           ctx.fillStyle = '#0d2340';
-          ctx.fillRect(0, 0, S, 800);
+          ctx.fillRect(0, 0, S, S);
 
           ctx.fillStyle = '#ffffff';
           ctx.font = '800 42px "Source Sans 3"';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'alphabetic';
-          ctx.fillText('ACTUALIDAD', 60, 90);
+          ctx.fillText('ACTUALIDAD', 70, 96);
           var anchoActualidad = ctx.measureText('ACTUALIDAD').width;
 
-          var bubbleX = 60 + anchoActualidad + 14, bubbleY = 55, bubbleW = 130, bubbleH = 50;
-          ctx.fillStyle = '#4fa8d8';
+          var bubbleX = 70 + anchoActualidad + 14, bubbleY = 52, bubbleW = 123, bubbleH = 46;
+          ctx.fillStyle = '#29abe2';
           rectRedondeado(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 10);
           ctx.fill();
           ctx.fillStyle = '#ffffff';
@@ -2262,39 +2261,35 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           ctx.textAlign = 'center';
           ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 11);
 
-          var ix = 70, iy = 155, iw = S - 140, ih = 620;
+          var ix = 70, iy = 140, iw = 940, ih = 630;
           ctx.save();
-          rectRedondeado(ctx, ix, iy, iw, ih, 18);
+          rectRedondeado(ctx, ix, iy, iw, ih, 16);
           ctx.clip();
           dibujarImagenCover(ctx, img, ix, iy, iw, ih);
           ctx.restore();
 
-          var cx = 70, cy = 700, cw = S - 140, ch = 330;
-          ctx.save();
-          ctx.shadowColor = 'rgba(0,0,0,0.25)';
-          ctx.shadowBlur = 30;
-          ctx.shadowOffsetY = 8;
+          var cx = 70, cy = 735, cw = 940, ch = 280;
           ctx.fillStyle = '#ffffff';
-          rectRedondeado(ctx, cx, cy, cw, ch, 16);
+          rectRedondeado(ctx, cx, cy, cw, ch, 24);
           ctx.fill();
-          ctx.restore();
 
           ctx.textAlign = 'left';
           ctx.textBaseline = 'alphabetic';
-          ctx.fillStyle = '#374151';
-          var resultadoTitulo = ajustarTitulo(ctx, titulo, cw - 80, 3);
-          ctx.font = '800 ' + resultadoTitulo.fontSize + 'px "Source Sans 3"';
+          ctx.fillStyle = '#33363b';
+          var tituloRecortado = recortarTitulo(titulo);
+          ctx.font = '800 44px "Source Sans 3"';
+          var lineasTitulo = envolverTexto(ctx, tituloRecortado, cw - 80, 3, '…');
           var ty = cy + 56;
-          resultadoTitulo.lineas.forEach(function(linea) {
+          lineasTitulo.forEach(function(linea) {
             ctx.fillText(linea, cx + 40, ty);
-            ty += resultadoTitulo.fontSize + 10;
+            ty += 54;
           });
 
           if(excerpt) {
-            ctx.fillStyle = '#6b7280';
+            ctx.fillStyle = '#6b7178';
             ctx.font = '600 26px "Source Sans 3"';
-            var lineasBajada = envolverTexto(ctx, excerpt, cw - 80, 2);
-            ty += 12;
+            var lineasBajada = envolverTexto(ctx, excerpt, cw - 80, 2, '...');
+            ty += 16;
             lineasBajada.forEach(function(linea) {
               ctx.fillText(linea, cx + 40, ty);
               ty += 34;
