@@ -2405,14 +2405,14 @@ function crearImagenInstagram(imagenSrc, titulo) {
           ctx.fillStyle = grad;
           ctx.fillRect(0, gradTop, SW, SH - gradTop);
 
-          // Se probo en la grilla real del perfil de Instagram con 130px de margen
-          // (9%) y el logo se seguia cortando -- se subio a 200px (14%), y despues
-          // de ver el resultado se pidio subirlo un poco mas.
-          var margenSeguro = 240;
+          // Historial de ajustes probados en la grilla real de Instagram: 130px
+          // (9%), 200px (14%), 240px (17%) -- todos seguian quedando ajustados.
+          // Salto mas grande esta vez en vez de subir de a poco: 300px (~21%).
+          var margenSeguro = 300;
           var logoBaselineY = SH - margenSeguro;
-          ctx.font = '800 28px "Source Sans 3"';
+          ctx.font = '800 24px "Source Sans 3"';
           var anchoActualidad = ctx.measureText('ACTUALIDAD').width;
-          var bubbleW = 92, bubbleH = 36, gapLogo = 10;
+          var bubbleW = 80, bubbleH = 32, gapLogo = 9;
           var totalLogoW = anchoActualidad + gapLogo + bubbleW;
           var logoStartX = (SW - totalLogoW) / 2;
           ctx.textAlign = 'left';
@@ -2424,9 +2424,9 @@ function crearImagenInstagram(imagenSrc, titulo) {
           rectRedondeado(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 9);
           ctx.fill();
           ctx.fillStyle = '#ffffff';
-          ctx.font = '800 22px "Source Sans 3"';
+          ctx.font = '800 19px "Source Sans 3"';
           ctx.textAlign = 'center';
-          ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 7);
+          ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 6);
 
           // Cortar a una cantidad fija de palabras rompia la frase a mitad de
           // una idea (ej. "...COLAPINTO DESDE" sin el "que llego a la F1").
@@ -2434,8 +2434,8 @@ function crearImagenInstagram(imagenSrc, titulo) {
           // tiene) y se deja que el sistema de tamanos de letra decrecientes lo
           // acomode en hasta 5 renglones -- ya probado con titulos larguisimos.
           var tituloRecortado = recortarTitulo(titulo).toUpperCase();
-          var maxAnchoTitulo = SW - 260;
-          var tamanosTitulo = [46, 42, 38, 34, 30];
+          var maxAnchoTitulo = SW - 340;
+          var tamanosTitulo = [36, 32, 28, 25, 22];
           var fontSizeElegido = tamanosTitulo[tamanosTitulo.length - 1];
           var lineasTitulo = [];
           ctx.textAlign = 'center';
