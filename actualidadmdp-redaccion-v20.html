@@ -1885,6 +1885,14 @@ function renderProgresoDeHoy(conteos) {
 }
 
 function mostrarNotasPublicadas(notas) {
+  // Mas nuevas primero -- GitHub devuelve los archivos en orden alfabetico
+  // por nombre, no por fecha, y con tantas notas cuesta encontrar las
+  // ultimas publicadas para acomodarles la tematica.
+  notas = notas.slice().sort(function(a, b) {
+    var fa = (a.contenido.match(/date:\s*([0-9-]+)/) || [])[1] || '';
+    var fb = (b.contenido.match(/date:\s*([0-9-]+)/) || [])[1] || '';
+    return fb > fa ? 1 : (fb < fa ? -1 : 0);
+  });
   document.getElementById('n-count').textContent = notas.length + ' notas publicadas';
   if(!notas.length) {
     document.getElementById('left-panel').innerHTML = '<div class="empty"><div class="empty-icon">📂</div><div class="empty-t">Todavia no hay notas publicadas</div></div>';
