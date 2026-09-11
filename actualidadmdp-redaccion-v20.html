@@ -2378,9 +2378,9 @@ function ejecutarPublicacion() {
       var imagenUrlAbsoluta = 'https://actualidadmdp.com.ar' + imagenFinal;
       var imagenSrcParaCanvas = imagenBase64 ? ('data:image/png;base64,' + imagenBase64) : imagenUrlAbsoluta;
       // Sin el link en el texto principal -- Facebook le baja el alcance a los posteos
-      // con link visible. Va aparte, como primer comentario (ver comentarLinkEnFacebook),
-      // despues de publicar.
-      var captionFb = (excerpt ? excerpt + '\n\n' : '') + '👇 Nota completa en el primer comentario';
+      // con link visible. El comentario con el link lo agrega el usuario a mano
+      // (mismo criterio que el flujo automático de n8n).
+      var captionFb = '👇 Nota completa en el primer comentario';
       // Instagram usa su propio texto si se cargo uno (campo "Texto para Instagram"),
       // si no cae al mismo resumen automatico que Facebook -- separados porque cada red
       // tiene su propio limite/estilo de texto.
@@ -2388,22 +2388,12 @@ function ejecutarPublicacion() {
       setTimeout(function() {
         crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt).then(function(blob) {
           if(debePublicarFb) {
-            publicarEnFacebook(blob, captionFb, true).then(function(resp) {
-              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).then(function() {
-                setStatus('✓ Compartido en Facebook con el link comentado: ' + titulo, 'ok');
-              }).catch(function(e) {
-                console.error('No se pudo comentar el link en Facebook:', e);
-                setStatus('⚠️ Se publicó en Facebook pero el link NO se pudo comentar solo ("' + titulo + '"). Agregalo vos a mano como comentario en el posteo: ' + urlNota, 'err');
-              });
+            publicarEnFacebook(blob, captionFb, true).then(function() {
+              setStatus('✓ Compartido en Facebook: ' + titulo + '. Agregá el link a mano como primer comentario.', 'ok');
             }).catch(function(e) {
               console.error('No se pudo armar la plantilla, se publica la foto sin marco:', e);
-              publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function(resp) {
-                comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).then(function() {
-                  setStatus('✓ Compartido en Facebook SIN la plantilla, con el link comentado: ' + titulo, 'ok');
-                }).catch(function(e3) {
-                  console.error('No se pudo comentar el link en Facebook:', e3);
-                  setStatus('⚠️ Se publicó en Facebook SIN la plantilla y el link NO se pudo comentar solo ("' + titulo + '"). Agregalo vos a mano como comentario: ' + urlNota, 'err');
-                });
+              publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
+                setStatus('✓ Compartido en Facebook SIN la plantilla: ' + titulo + '. Agregá el link a mano como primer comentario.', 'ok');
               }).catch(function(e2) {
                 setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
               });
@@ -2418,14 +2408,9 @@ function ejecutarPublicacion() {
           }
         }).catch(function(e) {
           if(debePublicarFb) {
-            publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function(resp) {
+            publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
               console.error('No se pudo armar la plantilla:', e);
-              comentarLinkEnFacebook(resp, '📖 Nota completa acá 👇\n' + urlNota).then(function() {
-                setStatus('✓ Compartido en Facebook SIN la plantilla, con el link comentado: ' + titulo, 'err');
-              }).catch(function(e3) {
-                console.error('No se pudo comentar el link en Facebook:', e3);
-                setStatus('⚠️ Se publicó en Facebook SIN la plantilla y el link NO se pudo comentar solo ("' + titulo + '"). Agregalo vos a mano como comentario: ' + urlNota, 'err');
-              });
+              setStatus('✓ Compartido en Facebook SIN la plantilla: ' + titulo + '. Agregá el link a mano como primer comentario.', 'ok');
             }).catch(function(e2) {
               setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
             });
