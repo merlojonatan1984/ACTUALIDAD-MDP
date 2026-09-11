@@ -2381,6 +2381,46 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
 // corto superpuesto (estilo La Nacion / LA 100), con zona segura amplia
 // (probada en la grilla real del perfil): 130px desde el borde inferior para
 // el logo, 110px a cada lado para el titulo.
+// Version propia de envolverTexto solo para el titulo de Instagram -- evita
+// que quede una palabra muy corta (tipicamente un numero, ej. "1" de "Formula
+// 1") sola en su propio renglon, pegandola a la palabra anterior como una
+// sola unidad que no se separa. No toca envolverTexto() en si, que sigue
+// usando crearImagenFacebook() sin cambios.
+function envolverTituloInstagram(ctx, texto, maxAncho, maxLineas, marcaCorte) {
+  marcaCorte = marcaCorte || '…';
+  var palabras = texto.split(/\s+/).filter(Boolean);
+  if (palabras.length > 1 && palabras[palabras.length - 1].length <= 2) {
+    var ultimaPalabra = palabras.pop();
+    palabras[palabras.length - 1] = palabras[palabras.length - 1] + ' ' + ultimaPalabra;
+  }
+  var lineas = [];
+  var actual = '';
+  var idx = 0;
+  while(idx < palabras.length && lineas.length < maxLineas) {
+    var prueba = actual ? actual + ' ' + palabras[idx] : palabras[idx];
+    if(ctx.measureText(prueba).width <= maxAncho) {
+      actual = prueba;
+      idx++;
+    } else if(!actual) {
+      actual = palabras[idx];
+      idx++;
+    } else {
+      lineas.push(actual);
+      actual = '';
+    }
+  }
+  if(actual && lineas.length < maxLineas) { lineas.push(actual); }
+  var truncado = idx < palabras.length;
+  if(truncado && lineas.length) {
+    var ultima = lineas[lineas.length - 1];
+    while(ctx.measureText(ultima + marcaCorte).width > maxAncho && ultima.length > 1) {
+      ultima = ultima.slice(0, -1).trim();
+    }
+    lineas[lineas.length - 1] = ultima + marcaCorte;
+  }
+  return lineas;
+}
+
 function crearImagenInstagram(imagenSrc, titulo) {
   return Promise.all([
     document.fonts.load('800 44px "Source Sans 3"')
@@ -2441,7 +2481,7 @@ function crearImagenInstagram(imagenSrc, titulo) {
           ctx.textAlign = 'center';
           for (var ti = 0; ti < tamanosTitulo.length; ti++) {
             ctx.font = '800 ' + tamanosTitulo[ti] + 'px "Source Sans 3"';
-            lineasTitulo = envolverTexto(ctx, tituloRecortado, maxAnchoTitulo, 5, '…');
+            lineasTitulo = envolverTituloInstagram(ctx, tituloRecortado, maxAnchoTitulo, 5, '…');
             fontSizeElegido = tamanosTitulo[ti];
             var ultimaLinea = lineasTitulo[lineasTitulo.length - 1] || '';
             if (ultimaLinea.indexOf('…') === -1) break;
