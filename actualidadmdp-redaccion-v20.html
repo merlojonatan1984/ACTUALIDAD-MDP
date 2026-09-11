@@ -2406,9 +2406,9 @@ function crearImagenInstagram(imagenSrc, titulo) {
           ctx.fillRect(0, gradTop, SW, SH - gradTop);
 
           // Se probo en la grilla real del perfil de Instagram con 130px de margen
-          // (9%) y el logo se seguia cortando -- se sube a 200px (14%) para tener
-          // bastante mas colchon.
-          var margenSeguro = 200;
+          // (9%) y el logo se seguia cortando -- se subio a 200px (14%), y despues
+          // de ver el resultado se pidio subirlo un poco mas.
+          var margenSeguro = 240;
           var logoBaselineY = SH - margenSeguro;
           ctx.font = '800 28px "Source Sans 3"';
           var anchoActualidad = ctx.measureText('ACTUALIDAD').width;
@@ -2435,7 +2435,7 @@ function crearImagenInstagram(imagenSrc, titulo) {
           // acomode en hasta 5 renglones -- ya probado con titulos larguisimos.
           var tituloRecortado = recortarTitulo(titulo).toUpperCase();
           var maxAnchoTitulo = SW - 220;
-          var tamanosTitulo = [64, 56, 48, 42, 36];
+          var tamanosTitulo = [54, 48, 42, 38, 34];
           var fontSizeElegido = tamanosTitulo[tamanosTitulo.length - 1];
           var lineasTitulo = [];
           ctx.textAlign = 'center';
