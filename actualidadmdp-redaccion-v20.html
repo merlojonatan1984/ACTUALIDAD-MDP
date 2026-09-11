@@ -247,6 +247,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <div id="confirmar-fb-preview" style="display:none;margin-top:12px">
       <div class="modal-hint" style="margin-bottom:6px">Así se va a ver la imagen:</div>
       <img id="confirmar-fb-preview-img" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block"/>
+      <a id="confirmar-fb-preview-download" href="#" download="instagram.jpg" style="display:block;margin-top:8px;color:var(--accent);font-weight:700;font-size:12px;text-decoration:none">⬇ Descargar esta imagen (1080×1440, lista para Instagram)</a>
     </div>
     <button class="modal-btn" onclick="confirmarYPublicar()" style="margin-top:16px">Confirmar y publicar →</button>
     <button class="modal-btn" onclick="document.getElementById('modal-confirmar-publicar').style.display='none'" style="margin-top:8px;background:var(--border);color:var(--muted)">Cancelar</button>
@@ -2055,8 +2056,12 @@ function actualizarPreviewFacebook() {
 
   previewBox.style.display = 'block';
   var previewImg = document.getElementById('confirmar-fb-preview-img');
+  var previewDownload = document.getElementById('confirmar-fb-preview-download');
   crearImagenFacebook('data:image/png;base64,' + imagenBase64, titulo, excerpt).then(function(blob) {
-    previewImg.src = URL.createObjectURL(blob);
+    var url = URL.createObjectURL(blob);
+    previewImg.src = url;
+    previewDownload.href = url;
+    previewDownload.download = (slugify(titulo) || 'nota') + '-instagram.jpg';
   }).catch(function() {
     previewBox.style.display = 'none';
   });
