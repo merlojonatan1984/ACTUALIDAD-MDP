@@ -131,6 +131,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .btn-img{background:var(--purple);color:#fff}
 .btn-gram{background:#0e7c7b;color:#fff}
 .btn-gram:hover{background:#0a5c5b}
+.btn-ig{background:linear-gradient(135deg,#833ab4,#e1306c,#fd1d1d);color:#fff}
+.btn-ig:hover{opacity:0.9}
 .btn-fix{background:#E8A33D;color:#fff;margin-top:6px}
 .btn-fix:hover{background:#c9840f}
 .btn-img:hover{background:#6d28d9}
@@ -247,7 +249,6 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <div id="confirmar-fb-preview" style="display:none;margin-top:12px">
       <div class="modal-hint" style="margin-bottom:6px">Así se va a ver la imagen:</div>
       <img id="confirmar-fb-preview-img" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block"/>
-      <a id="confirmar-fb-preview-download" href="#" download="instagram.jpg" style="display:block;margin-top:8px;color:var(--accent);font-weight:700;font-size:12px;text-decoration:none">⬇ Descargar esta imagen (1080×1440, lista para Instagram)</a>
     </div>
     <button class="modal-btn" onclick="confirmarYPublicar()" style="margin-top:16px">Confirmar y publicar →</button>
     <button class="modal-btn" onclick="document.getElementById('modal-confirmar-publicar').style.display='none'" style="margin-top:8px;background:var(--border);color:var(--muted)">Cancelar</button>
@@ -354,6 +355,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
         <button class="btn btn-tit" onclick="sugerirTitulos()">💡 Títulos</button>
         <button class="btn btn-img" onclick="generarCaricatura()">🎨 Imagen</button>
         <button class="btn btn-foto" onclick="buscarFotosLibres()">🖼 Fotos libres</button>
+        <button class="btn btn-ig" onclick="generarImagenInstagram()">📸 Imagen Instagram</button>
         <button class="btn btn-gram" onclick="revisarGramatica()">🔤 Gramática</button>
         <button class="btn btn-cp" onclick="copiar()">⎘ Copiar</button>
         <button class="btn btn-pub" onclick="publicarEnSitio()">🚀 Publicar en el sitio</button>
@@ -419,6 +421,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
         <div class="img-concepto" id="img-concepto"></div>
         <img class="img-result" id="img-result" alt="Caricatura"/>
         <button class="btn-dl" id="btn-dl" onclick="descargarImg()">⬇ Descargar imagen para Blogger</button>
+      </div>
+      <div class="img-box" id="ig-img-box">
+        <div class="img-status" id="ig-img-status">Generando imagen para Instagram...</div>
+        <img class="img-result" id="ig-img-result" alt="Imagen para Instagram"/>
+        <button class="btn-dl" id="btn-dl-ig" onclick="descargarImgInstagram()">⬇ Descargar imagen para Instagram</button>
       </div>
     </div>
     <div class="rfoot" id="rfoot">
@@ -566,6 +573,7 @@ function procesarSiguienteEnCola() {
   document.getElementById('e-tits').value = '';
   document.getElementById('e-texto-fuente-completo').value = '';
   document.getElementById('img-box').style.display = 'none';
+  document.getElementById('ig-img-box').style.display = 'none';
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
   mostrarAvisosGramatica(null);
@@ -1103,6 +1111,7 @@ function seleccionar(i) {
   document.getElementById('e-tits').value = '';
   document.getElementById('e-texto-fuente-completo').value = '';
   document.getElementById('img-box').style.display = 'none';
+  document.getElementById('ig-img-box').style.display = 'none';
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
   mostrarAvisosGramatica(null);
@@ -1583,6 +1592,50 @@ function generarCaricatura() {
   });
 }
 
+// Genera la imagen separada para Instagram (foto completa + titulo corto) y
+// la deja lista para bajar -- no publica nada solo, es 100% manual. No toca
+// la publicacion automatica de Facebook/Instagram via API.
+function generarImagenInstagram() {
+  var titulo = document.getElementById('e-titulo').value.trim();
+  if(!titulo) { setStatus('Completá el título antes de generar la imagen de Instagram.', 'err'); return; }
+
+  var imgEl = document.getElementById('img-result');
+  var tieneImagenIA = imgEl && imgEl.src && imgEl.src.indexOf('data:image') === 0;
+  var imagenBase64 = imagenManualBase64 || (tieneImagenIA ? imgEl.src.split(',')[1] : null);
+  if(!imagenBase64) { setStatus('Primero cargá o generá una imagen para la nota.', 'err'); return; }
+
+  var box = document.getElementById('ig-img-box');
+  box.style.display = 'block';
+  document.getElementById('ig-img-status').textContent = 'Generando imagen para Instagram...';
+  document.getElementById('ig-img-result').style.display = 'none';
+  document.getElementById('btn-dl-ig').style.display = 'none';
+  setStatus('Generando imagen para Instagram...', 'loading');
+
+  crearImagenInstagram('data:image/png;base64,' + imagenBase64, titulo).then(function(blob) {
+    var img = document.getElementById('ig-img-result');
+    img.src = URL.createObjectURL(blob);
+    img.style.display = 'block';
+    document.getElementById('ig-img-status').textContent = 'Lista -- descargala y subila a mano en Instagram.';
+    document.getElementById('btn-dl-ig').style.display = 'block';
+    setStatus('Imagen para Instagram generada.', 'ok');
+  }).catch(function(e) {
+    document.getElementById('ig-img-status').textContent = 'Error: ' + e.message;
+    setStatus('Error al generar la imagen de Instagram: ' + e.message, 'err');
+  });
+}
+
+function descargarImgInstagram() {
+  var img = document.getElementById('ig-img-result');
+  if(!img.src) return;
+  var titulo = document.getElementById('e-titulo').value.substring(0, 30).replace(/[^a-z0-9]/gi, '-').toLowerCase();
+  var a = document.createElement('a');
+  a.href = img.src;
+  a.download = 'instagram-' + titulo + '.jpg';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function descargarImg() {
   var img = document.getElementById('img-result');
   if(!img.src) return;
@@ -2056,12 +2109,8 @@ function actualizarPreviewFacebook() {
 
   previewBox.style.display = 'block';
   var previewImg = document.getElementById('confirmar-fb-preview-img');
-  var previewDownload = document.getElementById('confirmar-fb-preview-download');
   crearImagenFacebook('data:image/png;base64,' + imagenBase64, titulo, excerpt).then(function(blob) {
-    var url = URL.createObjectURL(blob);
-    previewImg.src = url;
-    previewDownload.href = url;
-    previewDownload.download = (slugify(titulo) || 'nota') + '-instagram.jpg';
+    previewImg.src = URL.createObjectURL(blob);
   }).catch(function() {
     previewBox.style.display = 'none';
   });
@@ -2255,6 +2304,9 @@ function tituloParaImagen(titulo) {
   return palabras.slice(0, 7).join(' ');
 }
 
+// SIN TOCAR -- esta es la plantilla que ya usan la publicacion automatica en
+// Facebook y la publicacion via API en Instagram (publicarEnInstagram). Queda
+// exactamente como estaba antes de esta conversacion.
 function crearImagenFacebook(imagenSrc, titulo, excerpt) {
   return Promise.all([
     document.fonts.load('800 44px "Source Sans 3"'),
@@ -2265,22 +2317,95 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
       img.crossOrigin = 'anonymous';
       img.onload = function() {
         try {
-          // Instagram dejo de usar el formato cuadrado (1:1) como estandar -- desde
-          // 2025/2026 tanto el feed como la nueva grilla vertical del perfil muestran
-          // sin ningun recorte el formato nativo 3:4 (1080x1440). Publicar en 1:1 hace
-          // que Instagram recorte o reencuadre la imagen de forma impredecible.
+          var S = 1080;
+          var canvas = document.createElement('canvas');
+          canvas.width = S; canvas.height = S;
+          var ctx = canvas.getContext('2d');
+
+          ctx.fillStyle = '#0d2340';
+          ctx.fillRect(0, 0, S, S);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '800 42px "Source Sans 3"';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText('ACTUALIDAD', 70, 96);
+          var anchoActualidad = ctx.measureText('ACTUALIDAD').width;
+
+          var bubbleX = 70 + anchoActualidad + 14, bubbleY = 52, bubbleW = 123, bubbleH = 46;
+          ctx.fillStyle = '#29abe2';
+          rectRedondeado(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 10);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '800 32px "Source Sans 3"';
+          ctx.textAlign = 'center';
+          ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 11);
+
+          var ix = 70, iy = 140, iw = 940, ih = 630;
+          ctx.save();
+          rectRedondeado(ctx, ix, iy, iw, ih, 16);
+          ctx.clip();
+          dibujarImagenCover(ctx, img, ix, iy, iw, ih);
+          ctx.restore();
+
+          var cx = 70, cy = 735, cw = 940, ch = 280;
+          ctx.fillStyle = '#ffffff';
+          rectRedondeado(ctx, cx, cy, cw, ch, 24);
+          ctx.fill();
+
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillStyle = '#33363b';
+          var tituloRecortado = recortarTitulo(titulo);
+          ctx.font = '800 44px "Source Sans 3"';
+          var lineasTitulo = envolverTexto(ctx, tituloRecortado, cw - 80, 3, '…');
+          var ty = cy + 56;
+          lineasTitulo.forEach(function(linea) {
+            ctx.fillText(linea, cx + 40, ty);
+            ty += 54;
+          });
+
+          if(excerpt) {
+            ctx.fillStyle = '#6b7178';
+            ctx.font = '600 26px "Source Sans 3"';
+            var lineasBajada = envolverTexto(ctx, excerpt, cw - 80, 2, '...');
+            ty += 16;
+            lineasBajada.forEach(function(linea) {
+              ctx.fillText(linea, cx + 40, ty);
+              ty += 34;
+            });
+          }
+
+          canvas.toBlob(function(blob) {
+            if(blob) resolve(blob); else reject(new Error('No se pudo generar la imagen de Facebook'));
+          }, 'image/jpeg', 0.92);
+        } catch(e) { reject(e); }
+      };
+      img.onerror = function() { reject(new Error('No se pudo cargar la imagen para armar la plantilla')); };
+      img.src = imagenSrc;
+    });
+  });
+}
+
+// Plantilla SEPARADA, solo para bajar a mano y publicar en Instagram vos
+// mismo -- no la usa ninguna publicacion automatica. Foto completa + titulo
+// corto superpuesto (estilo La Nacion / LA 100), con zona segura amplia
+// (probada en la grilla real del perfil): 130px desde el borde inferior para
+// el logo, 110px a cada lado para el titulo.
+function crearImagenInstagram(imagenSrc, titulo) {
+  return Promise.all([
+    document.fonts.load('800 44px "Source Sans 3"')
+  ]).catch(function() {}).then(function() {
+    return new Promise(function(resolve, reject) {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function() {
+        try {
           var SW = 1080, SH = 1440;
           var canvas = document.createElement('canvas');
           canvas.width = SW; canvas.height = SH;
           var ctx = canvas.getContext('2d');
 
-          // Foto completa + titulo superpuesto (estilo La Nacion / LA 100), sin
-          // marco ni tarjeta blanca. La primera version de este diseño tenia el
-          // texto muy cerca del borde inferior (solo 60px) y en la grilla del
-          // perfil de Instagram quedaba cortado -- el recorte real de la grilla
-          // no coincide exactamente con lo que documenta Instagram, asi que ahora
-          // se deja una zona segura mucho mas generosa: 130px minimo desde
-          // cualquier borde para el logo, y el titulo nunca baja de esa linea.
           dibujarImagenCover(ctx, img, 0, 0, SW, SH);
 
           var gradTop = SH * 0.40;
@@ -2291,7 +2416,6 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           ctx.fillStyle = grad;
           ctx.fillRect(0, gradTop, SW, SH - gradTop);
 
-          // Logo centrado, con 130px de zona segura desde el borde inferior.
           var margenSeguro = 130;
           var logoBaselineY = SH - margenSeguro;
           ctx.font = '800 28px "Source Sans 3"';
@@ -2312,10 +2436,6 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           ctx.textAlign = 'center';
           ctx.fillText('MDP', bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 7);
 
-          // Titulo centrado, en mayuscula, con 110px de zona segura a cada lado
-          // (ancho maximo de texto = SW - 220, contra SW - 140 de la version
-          // anterior) -- probamos varios tamanos de letra hasta que entre
-          // completo en 5 renglones sin cortar con "...".
           var tituloRecortado = tituloParaImagen(titulo).toUpperCase();
           var maxAnchoTitulo = SW - 220;
           var tamanosTitulo = [64, 56, 48, 42, 36];
@@ -2343,7 +2463,7 @@ function crearImagenFacebook(imagenSrc, titulo, excerpt) {
           ctx.shadowBlur = 0;
 
           canvas.toBlob(function(blob) {
-            if(blob) resolve(blob); else reject(new Error('No se pudo generar la imagen de Facebook'));
+            if(blob) resolve(blob); else reject(new Error('No se pudo generar la imagen de Instagram'));
           }, 'image/jpeg', 0.92);
         } catch(e) { reject(e); }
       };
@@ -2515,6 +2635,7 @@ function limpiar() {
     document.getElementById('wc-ig').textContent = '0 / 2200 caracteres';
   }
   document.getElementById('img-box').style.display = 'none';
+  document.getElementById('ig-img-box').style.display = 'none';
   mostrarAvisosIA(null);
   mostrarAvisoFuente(null);
   mostrarAvisosGramatica(null);
