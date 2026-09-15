@@ -2150,6 +2150,15 @@ function comentarLinkEnFacebook(respuestaPublicacion, texto) {
   });
 }
 
+function intentarPublicarEnFacebook(url, opciones) {
+  return fetch(url, opciones).then(function(r) {
+    return r.json().then(function(d) {
+      if(d.error) throw new Error(d.error.message);
+      return d;
+    });
+  });
+}
+
 function publicarEnFacebook(fuente, caption, esBlob) {
   var token = getFacebookToken();
   var pageId = getFacebookPageId();
@@ -2169,11 +2178,13 @@ function publicarEnFacebook(fuente, caption, esBlob) {
     body.set('access_token', token);
     opciones = { method: 'POST', body: body };
   }
-  return fetch(url, opciones).then(function(r) {
-    return r.json().then(function(d) {
-      if(d.error) throw new Error(d.error.message);
-      return d;
-    });
+  // Un corte de conexion de un instante (esto corre 2 minutos despues de
+  // publicar, en segundo plano) puede tirar "Failed to fetch" sin que sea un
+  // problema real con la nota ni con las claves -- se reintenta una vez
+  // despues de una pausa antes de darse por vencido.
+  return intentarPublicarEnFacebook(url, opciones).catch(function() {
+    return new Promise(function(resolve) { setTimeout(resolve, 5000); })
+      .then(function() { return intentarPublicarEnFacebook(url, opciones); });
   });
 }
 
