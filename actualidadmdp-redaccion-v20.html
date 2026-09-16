@@ -392,6 +392,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
       <div class="fl">
         <label>Texto de la nota</label>
         <div class="texto-toolbar">
+          <button type="button" class="mini-btn" onclick="aplicarNegrita()"><b>B</b> Negrita</button>
           <button type="button" class="mini-btn" onclick="insertarSubtitulo()">🔖 Subtítulo</button>
           <button type="button" class="mini-btn" onclick="document.getElementById('e-imagen-inline-file').click()">🖼 Imagen acá</button>
           <input id="e-imagen-inline-file" type="file" accept="image/*" multiple style="display:none" onchange="insertarImagenEnTexto(event)"/>
@@ -679,6 +680,36 @@ function insertarVideo() {
   ta.setSelectionRange(nuevaPos, nuevaPos);
   wc();
   setStatus('Video agregado a la nota.', 'ok');
+}
+
+// Envuelve el texto seleccionado en **negrita** (markdown) -- el sitio ya
+// sabe renderizar negrita en el cuerpo de la nota. Si ya estaba en negrita,
+// la saca (funciona como interruptor). Si no hay nada seleccionado, inserta
+// un texto de ejemplo ya seleccionado para que el usuario lo pueda tipear
+// encima directo.
+function aplicarNegrita() {
+  var ta = document.getElementById('e-texto');
+  var inicio = ta.selectionStart, fin = ta.selectionEnd;
+  var seleccion = ta.value.substring(inicio, fin);
+  var antes = ta.value.substring(0, inicio);
+  var despues = ta.value.substring(fin);
+
+  if (seleccion.length >= 4 && seleccion.startsWith('**') && seleccion.endsWith('**')) {
+    var sinNegrita = seleccion.slice(2, -2);
+    ta.value = antes + sinNegrita + despues;
+    ta.focus();
+    ta.setSelectionRange(inicio, inicio + sinNegrita.length);
+  } else if (seleccion) {
+    ta.value = antes + '**' + seleccion + '**' + despues;
+    ta.focus();
+    ta.setSelectionRange(inicio, inicio + seleccion.length + 4);
+  } else {
+    var placeholder = 'texto en negrita';
+    ta.value = antes + '**' + placeholder + '**' + despues;
+    ta.focus();
+    ta.setSelectionRange(inicio + 2, inicio + 2 + placeholder.length);
+  }
+  wc();
 }
 
 function insertarSubtitulo() {
