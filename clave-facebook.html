@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clave permanente de Facebook — Actualidad MDP</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#f0f2f5;color:#0f1923;margin:0;padding:24px 16px}
+  .box{max-width:620px;margin:0 auto;background:#fff;border:1px solid #dde2e8;border-radius:12px;padding:22px 22px 26px}
+  h1{font-size:20px;margin:0 0 6px;color:#0b1f2e}
+  p.s{margin:0 0 16px;color:#5a6472;font-size:13.5px;line-height:1.5}
+  ol{margin:0 0 18px;padding-left:20px;font-size:13.5px;line-height:1.6}
+  a{color:#0088cc}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;color:#5a6472;margin:14px 0 4px}
+  input{width:100%;box-sizing:border-box;padding:10px;border:1.5px solid #dde2e8;border-radius:7px;font-size:13px}
+  button{margin-top:18px;width:100%;padding:12px;border:none;border-radius:8px;background:#0b1f2e;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+  button:disabled{opacity:.55;cursor:default}
+  #log{margin-top:16px;font-size:13.5px;line-height:1.6}
+  .ok{color:#1a8f4a;font-weight:700}
+  .err{color:#c0392b;font-weight:700}
+  .nota{margin-top:14px;font-size:12px;color:#5a6472}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Clave permanente de Facebook</h1>
+  <p class="s">Esta página alarga la clave, saca la de tu página y la guarda sola en el panel. Nada de esto pasa por ningún chat.</p>
+  <ol>
+    <li>En el <a href="https://developers.facebook.com/tools/explorer/" target="_blank">Explorer</a> dejá <b>"Usuario o página"</b> en <b>"Identificador de usuario"</b> (no en la página), apretá <b>Generate Access Token</b> y copiá esa clave.</li>
+    <li>Abrí <a href="https://developers.facebook.com/apps/1857376458566431/settings/basic/" target="_blank">la configuración de tu app</a>, buscá <b>"Clave secreta de la aplicación"</b>, apretá <b>Mostrar</b> y copiala.</li>
+    <li>Pegá las dos abajo y apretá el botón.</li>
+  </ol>
+  <label for="corta">CLAVE TEMPORAL (del Explorer)</label>
+  <input id="corta" type="password" autocomplete="off">
+  <label for="secreta">CLAVE SECRETA DE LA APLICACIÓN</label>
+  <input id="secreta" type="password" autocomplete="off">
+  <button id="go" type="button">Generar y guardar en el panel</button>
+  <div id="log"></div>
+  <div class="nota">La clave secreta se usa una sola vez, desde tu navegador hacia Facebook, y no se guarda en ningún lado.</div>
+</div>
+<script>
+var APP_ID = '1857376458566431';
+var PAGE_ID = '1086424091224354';
+var G = 'https://graph.facebook.com/v21.0/';
+var log = document.getElementById('log');
+
+function paso(txt, cls) {
+  var d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = txt;
+  log.appendChild(d);
+}
+function pedir(url) {
+  return fetch(url).then(function(r) { return r.json(); }).then(function(d) {
+    if (d.error) throw new Error(d.error.message);
+    return d;
+  });
+}
+
+document.getElementById('go').addEventListener('click', function() {
+  var btn = this;
+  var corta = document.getElementById('corta').value.trim();
+  var secreta = document.getElementById('secreta').value.trim();
+  log.innerHTML = '';
+  if (!corta || !secreta) { paso('Faltan las dos claves.', 'err'); return; }
+  btn.disabled = true;
+  var larga, paginaToken;
+
+  paso('1/4 Alargando la clave...');
+  pedir(G + 'oauth/access_token?grant_type=fb_exchange_token&client_id=' + APP_ID +
+        '&client_secret=' + encodeURIComponent(secreta) +
+        '&fb_exchange_token=' + encodeURIComponent(corta))
+  .then(function(d) {
+    larga = d.access_token;
+    paso('2/4 Buscando tu página...');
+    return pedir(G + 'me/accounts?limit=100&access_token=' + encodeURIComponent(larga));
+  })
+  .then(function(d) {
+    var p = (d.data || []).filter(function(x) { return String(x.id) === PAGE_ID; })[0];
+    if (!p) throw new Error('No aparece la página Actualidadmdp. En el Explorer tenés que aprobar esa página al generar la clave.');
+    paginaToken = p.access_token;
+    paso('3/4 Verificando que no venza...');
+    return pedir(G + 'debug_token?input_token=' + encodeURIComponent(paginaToken) +
+                 '&access_token=' + APP_ID + '%7C' + encodeURIComponent(secreta));
+  })
+  .then(function(d) {
+    var info = d.data || {};
+    if (!info.is_valid) throw new Error('Facebook dice que la clave no es válida.');
+    var nunca = (info.expires_at === 0);
+    paso('4/4 Guardando en el panel...');
+    localStorage.setItem('fb_page_token', paginaToken);
+    localStorage.setItem('fb_page_id', PAGE_ID);
+    if (nunca) {
+      paso('✓ Listo. Clave de la página guardada. No vence nunca. Ya podés volver al panel (recargalo con Ctrl+Shift+R).', 'ok');
+    } else {
+      var hasta = new Date(info.expires_at * 1000).toLocaleString('es-AR');
+      paso('Guardada, pero vence el ' + hasta + '. Avisame para revisarlo.', 'err');
+    }
+  })
+  .catch(function(e) {
+    paso('No se pudo: ' + e.message, 'err');
+  })
+  .then(function() {
+    document.getElementById('corta').value = '';
+    document.getElementById('secreta').value = '';
+    btn.disabled = false;
+  });
+});
+</script>
+</body>
+</html>
