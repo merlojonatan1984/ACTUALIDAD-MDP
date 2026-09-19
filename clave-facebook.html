@@ -90,12 +90,16 @@ document.getElementById('go').addEventListener('click', function() {
     paso('4/4 Guardando en el panel...');
     localStorage.setItem('fb_page_token', paginaToken);
     localStorage.setItem('fb_page_id', PAGE_ID);
-    if (nunca) {
-      paso('✓ Listo. Clave de la página guardada. No vence nunca. Ya podés volver al panel (recargalo con Ctrl+Shift+R).', 'ok');
-    } else {
-      var hasta = new Date(info.expires_at * 1000).toLocaleString('es-AR');
-      paso('Guardada, pero vence el ' + hasta + '. Avisame para revisarlo.', 'err');
-    }
+    return pedir(G + 'me?fields=id,name&access_token=' + encodeURIComponent(localStorage.getItem('fb_page_token') || '')).then(function(me) {
+      if (String(me.id) !== PAGE_ID) throw new Error('Se guardó, pero la clave no corresponde a la página (dice ' + me.name + ').');
+      if (nunca) {
+        paso('✓ Verificada y guardada: publica como ' + me.name + '. No vence nunca.', 'ok');
+        paso('Listo, no hace falta hacer nada más. Volvé al panel y recargalo con Ctrl+Shift+R.', 'ok');
+      } else {
+        var hasta = new Date(info.expires_at * 1000).toLocaleString('es-AR');
+        paso('Guardada y funciona, pero vence el ' + hasta + '. Sacale captura a esta pantalla y mandámela.', 'err');
+      }
+    });
   })
   .catch(function(e) {
     paso('No se pudo: ' + e.message, 'err');

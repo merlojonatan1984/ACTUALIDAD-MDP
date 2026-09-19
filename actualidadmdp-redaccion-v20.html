@@ -994,6 +994,7 @@ setTimeout(function() {
   if(!t) return;
   diagnosticarFacebook(t, getFacebookPageId()).then(function(r) {
     if(!r.ok) setStatus('⚠️ Facebook: ' + r.msg + ' (Botón 🔑 API)', 'err');
+    else setStatus('✓ Facebook listo para compartir', 'ok');
   });
 }, 2000);
 function getFacebookToken() { return localStorage.getItem('fb_page_token') || ''; }
