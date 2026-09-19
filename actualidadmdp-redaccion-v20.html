@@ -219,7 +219,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <input class="modal-input" id="fbtoken-inp" type="password" autocomplete="new-password" placeholder="EAAG..."/>
     <button type="button" class="mini-btn" style="margin-top:6px" onclick="probarFacebookDesdeModal()">🔎 Probar clave de Facebook</button>
     <div class="modal-hint" id="fb-check" style="margin-top:6px"></div>
-    <div class="modal-hint">Sacalo en <a href="https://developers.facebook.com/tools/explorer/" target="_blank">developers.facebook.com/tools/explorer</a>. Opcional: sin esto, la nota igual se publica en el sitio, solo no se comparte sola en Facebook.</div>
+    <div class="modal-hint"><b>Clave permanente:</b> generala y guardala sola en <a href="https://merlojonatan1984.github.io/ACTUALIDAD-MDP/clave-facebook.html" target="_blank">esta página</a> (después recargá el panel). Opcional: sin esto, la nota igual se publica en el sitio, solo no se comparte sola en Facebook.</div>
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">ID DE CUENTA DE INSTAGRAM BUSINESS</label>
     <input class="modal-input" id="igid-inp" type="text" placeholder="178414..."/>
     <div class="modal-hint">La cuenta tiene que ser Business y estar conectada a la página de Facebook. Usa el mismo token de arriba (con permisos instagram_basic e instagram_content_publish agregados). Opcional.</div>
@@ -246,8 +246,9 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     </select>
     <div class="modal-hint" id="confirmar-cat-preview" style="margin-top:6px"></div>
     <label id="confirmar-fb-label" style="display:none;align-items:center;gap:8px;font-size:12px;color:#5a6472;margin-top:14px;cursor:pointer">
-      <input type="checkbox" id="confirmar-fb" checked onchange="actualizarPreviewFacebook()"/> <span id="confirmar-fb-label-texto">Publicar también en Facebook</span>
+      <input type="checkbox" id="confirmar-fb" checked onchange="actualizarPreviewFacebook();verificarFacebookAntesDePublicar()"/> <span id="confirmar-fb-label-texto">Publicar también en Facebook</span>
     </label>
+    <div id="confirmar-fb-estado" class="modal-hint" style="display:none;margin-top:8px"></div>
     <div id="confirmar-fb-preview" style="display:none;margin-top:12px">
       <div class="modal-hint" style="margin-bottom:6px">Así se va a ver la imagen:</div>
       <img id="confirmar-fb-preview-img" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block"/>
@@ -942,6 +943,35 @@ function diagnosticarFacebook(token, pageId) {
       return { ok: true, msg: '✓ Clave correcta: publica como ' + d.name + '.' };
     })
     .catch(function() { return { ok: false, msg: 'No pude conectar con Facebook (revisá internet o DNS).' }; });
+}
+
+var URL_CLAVE_FB = 'https://merlojonatan1984.github.io/ACTUALIDAD-MDP/clave-facebook.html';
+
+// Traduce el error crudo de Facebook a algo que se entienda y diga que hacer.
+function explicarErrorFacebook(msg) {
+  msg = msg || '';
+  if(/expired|190/i.test(msg)) return 'La clave de Facebook VENCIÓ. Generá la permanente en: ' + URL_CLAVE_FB;
+  if(/publish_actions|permission|\(#200\)|#10\b/i.test(msg)) return 'La clave guardada es personal o no tiene permiso para publicar en la página. Generá la correcta en: ' + URL_CLAVE_FB;
+  if(/Object with ID|does not exist/i.test(msg)) return 'El ID de la página o la clave están mal cargados. Generá la clave de nuevo en: ' + URL_CLAVE_FB;
+  if(/Failed to fetch|NetworkError/i.test(msg)) return 'No hubo conexión con Facebook (internet, DNS o algo que la bloquea). Probá de nuevo en un rato.';
+  return msg;
+}
+
+// Antes de publicar: si Facebook esta tildado, prueba la clave y avisa YA
+// en la ventanita de confirmacion, no 2 minutos despues.
+function verificarFacebookAntesDePublicar() {
+  var el = document.getElementById('confirmar-fb-estado');
+  if(!el) return;
+  el.style.display = 'none';
+  var chk = document.getElementById('confirmar-fb');
+  if(!chk || !chk.checked) return;
+  el.style.display = 'block';
+  el.style.color = '#5a6472';
+  el.textContent = 'Revisando la clave de Facebook...';
+  diagnosticarFacebook(getFacebookToken(), getFacebookPageId()).then(function(r) {
+    el.style.color = r.ok ? '#1a8f4a' : '#c0392b';
+    el.textContent = r.ok ? '✓ Facebook listo para compartir.' : '⚠️ ' + r.msg + ' — Generá la clave en: ' + URL_CLAVE_FB;
+  });
 }
 
 function probarFacebookDesdeModal() {
@@ -2166,6 +2196,7 @@ function publicarEnSitio() {
     fbLabel.style.display = 'none';
   }
   actualizarPreviewFacebook();
+  verificarFacebookAntesDePublicar();
 
   document.getElementById('modal-confirmar-publicar').style.display = 'flex';
 }
@@ -2681,41 +2712,42 @@ function ejecutarPublicacion() {
       // si no cae al mismo resumen automatico que Facebook -- separados porque cada red
       // tiene su propio limite/estilo de texto.
       var captionIg = (textoIgManual ? textoIgManual + '\n\n' : (excerpt ? excerpt + '\n\n' : '')) + urlNota;
-      setTimeout(function() {
-        crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt).then(function(blob) {
-          if(debePublicarFb) {
-            publicarEnFacebook(blob, captionFb, true).then(function() {
-              setStatus('✓ Compartido en Facebook: ' + titulo + '. Agregá el link a mano como primer comentario.', 'ok');
-            }).catch(function(e) {
-              console.error('No se pudo armar la plantilla, se publica la foto sin marco:', e);
-              publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
-                setStatus('✓ Compartido en Facebook SIN la plantilla: ' + titulo + '. Agregá el link a mano como primer comentario.', 'ok');
-              }).catch(function(e2) {
-                setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
-              });
-            });
-          }
-          if(debePublicarIg) {
-            publicarEnInstagram(blob, captionIg, slug).then(function() {
-              setStatus('✓ Compartido en Instagram: ' + titulo, 'ok');
-            }).catch(function(e) {
-              setStatus('Error al compartir en Instagram "' + titulo + '": ' + e.message, 'err');
-            });
-          }
-        }).catch(function(e) {
-          if(debePublicarFb) {
+      // La foto de Facebook se sube directo (no depende de que el sitio ya este
+      // desplegado), asi que se comparte YA, en segundos -- antes esperaba 2
+      // minutos y si se recargaba o cerraba el panel en ese lapso se perdia sin
+      // ningun aviso. Solo el respaldo por URL (si falla armar la plantilla) espera.
+      var avisarFallaFb = function(e) {
+        var m = explicarErrorFacebook(e && e.message);
+        setStatus('⚠️ NO se compartió en Facebook "' + titulo + '": ' + m, 'err');
+        alert('⚠️ NO se compartió en Facebook:\n"' + titulo + '"\n\n' + m + '\n\nLa nota SÍ quedó publicada. Para compartirla a mano, este es el link:\n' + urlNota);
+      };
+      setStatus('Compartiendo en ' + [debePublicarFb ? 'Facebook' : null, debePublicarIg ? 'Instagram' : null].filter(Boolean).join(' + ') + '...', 'loading');
+      crearImagenFacebook(imagenSrcParaCanvas, titulo, excerpt).then(function(blob) {
+        if(debePublicarFb) {
+          publicarEnFacebook(blob, captionFb, true).then(function() {
+            setStatus('✓ Compartido en Facebook: ' + titulo + '. Agregá el link a mano como primer comentario.', 'ok');
+          }).catch(avisarFallaFb);
+        }
+        if(debePublicarIg) {
+          publicarEnInstagram(blob, captionIg, slug).then(function() {
+            setStatus('✓ Compartido en Instagram: ' + titulo, 'ok');
+          }).catch(function(e) {
+            setStatus('Error al compartir en Instagram "' + titulo + '": ' + e.message, 'err');
+          });
+        }
+      }).catch(function(e) {
+        console.error('No se pudo armar la plantilla:', e);
+        if(debePublicarFb) {
+          setTimeout(function() {
             publicarEnFacebook(imagenUrlAbsoluta, captionFb, false).then(function() {
-              console.error('No se pudo armar la plantilla:', e);
               setStatus('✓ Compartido en Facebook SIN la plantilla: ' + titulo + '. Agregá el link a mano como primer comentario.', 'ok');
-            }).catch(function(e2) {
-              setStatus('Error al compartir en Facebook "' + titulo + '": ' + e2.message, 'err');
-            });
-          }
-          if(debePublicarIg) {
-            setStatus('No se pudo compartir en Instagram (falló al armar la plantilla) "' + titulo + '": ' + e.message, 'err');
-          }
-        });
-      }, 120000);
+            }).catch(avisarFallaFb);
+          }, 120000);
+        }
+        if(debePublicarIg) {
+          setStatus('No se pudo compartir en Instagram (falló al armar la plantilla) "' + titulo + '": ' + e.message, 'err');
+        }
+      });
     }
 
     notaEditando = null;
@@ -2728,10 +2760,12 @@ function ejecutarPublicacion() {
     var redes = [debePublicarFb ? 'Facebook' : null, debePublicarIg ? 'Instagram' : null].filter(Boolean).join(' + ');
     if(colaActiva) {
       colaPos++;
-      setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + ')' + (redes ? ' (' + redes + ' en 2 min)' : '') + '. Pasando a la siguiente...', 'ok');
+      setStatus('✓ Publicada (' + colaPos + '/' + colaItems.length + ')' + (redes ? ' (compartiendo en ' + redes + ' ahora)' : '') + '. Pasando a la siguiente...', 'ok');
       setTimeout(procesarSiguienteEnCola, 1200);
     } else {
-      setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + (redes ? '. Se comparte en ' + redes + ' en 2 minutos' : '') + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
+      // No se pisa el mensaje "Compartiendo..." de arriba: el resultado real
+      // (✓ o ⚠️) lo escribe el propio compartido apenas termina.
+      if(!redes) setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
     }
   }).catch(function(e) {
     setStatus('Error al publicar: ' + e.message, 'err');
