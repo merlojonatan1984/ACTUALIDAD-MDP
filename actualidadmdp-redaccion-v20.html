@@ -214,9 +214,11 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <input class="modal-input" id="unsplash-inp" type="password" placeholder="Access Key..."/>
     <div class="modal-hint">Creá una app gratis en <a href="https://unsplash.com/oauth/applications" target="_blank">unsplash.com/oauth/applications</a> y copiá el "Access Key". Opcional.</div>
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">ID DE PÁGINA DE FACEBOOK</label>
-    <input class="modal-input" id="fbpage-inp" type="text" placeholder="123456789012345"/>
+    <input class="modal-input" id="fbpage-inp" type="text" autocomplete="off" placeholder="1086424091224354"/>
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">TOKEN DE PÁGINA DE FACEBOOK (para publicar solo)</label>
-    <input class="modal-input" id="fbtoken-inp" type="password" placeholder="EAAG..."/>
+    <input class="modal-input" id="fbtoken-inp" type="password" autocomplete="new-password" placeholder="EAAG..."/>
+    <button type="button" class="mini-btn" style="margin-top:6px" onclick="probarFacebookDesdeModal()">🔎 Probar clave de Facebook</button>
+    <div class="modal-hint" id="fb-check" style="margin-top:6px"></div>
     <div class="modal-hint">Sacalo en <a href="https://developers.facebook.com/tools/explorer/" target="_blank">developers.facebook.com/tools/explorer</a>. Opcional: sin esto, la nota igual se publica en el sitio, solo no se comparte sola en Facebook.</div>
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">ID DE CUENTA DE INSTAGRAM BUSINESS</label>
     <input class="modal-input" id="igid-inp" type="text" placeholder="178414..."/>
@@ -913,7 +915,57 @@ function guardarKey() {
 function getGeminiKey() { return localStorage.getItem('gemini_key') || ''; }
 function getGithubToken() { return localStorage.getItem('github_token') || ''; }
 function getUnsplashKey() { return localStorage.getItem('unsplash_key') || ''; }
-function getFacebookPageId() { return localStorage.getItem('fb_page_id') || ''; }
+// ID fijo de la pagina Actualidadmdp: si lo guardado no es un numero (paso que
+// se pego una clave en ese campo), se usa este.
+var FB_PAGE_ID_DEFAULT = '1086424091224354';
+function getFacebookPageId() {
+  var v = (localStorage.getItem('fb_page_id') || '').trim();
+  return /^\d{10,20}$/.test(v) ? v : FB_PAGE_ID_DEFAULT;
+}
+
+// Prueba la clave de Facebook contra Facebook y explica en simple si sirve.
+function diagnosticarFacebook(token, pageId) {
+  if(!token) return Promise.resolve({ ok: false, msg: 'Todavía no cargaste la clave de Facebook.' });
+  return fetch('https://graph.facebook.com/v21.0/me?fields=id,name&access_token=' + encodeURIComponent(token))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if(d.error) {
+        var m = d.error.message || '';
+        if(d.error.code === 190 || /expired/i.test(m)) {
+          return { ok: false, msg: 'La clave de Facebook está VENCIDA (es la temporal). Hay que pegar la clave de la PÁGINA, la que no vence.' };
+        }
+        return { ok: false, msg: 'Facebook rechazó la clave: ' + m };
+      }
+      if(String(d.id) !== String(pageId)) {
+        return { ok: false, msg: 'Esta clave es de "' + d.name + '" (cuenta personal u otra), no de la página Actualidadmdp. En el Explorer elegí Actualidadmdp en "Usuario o página" y copiá esa clave.' };
+      }
+      return { ok: true, msg: '✓ Clave correcta: publica como ' + d.name + '.' };
+    })
+    .catch(function() { return { ok: false, msg: 'No pude conectar con Facebook (revisá internet o DNS).' }; });
+}
+
+function probarFacebookDesdeModal() {
+  var box = document.getElementById('fb-check');
+  var token = document.getElementById('fbtoken-inp').value.trim() || getFacebookToken();
+  var pageId = document.getElementById('fbpage-inp').value.trim();
+  if(!/^\d{10,20}$/.test(pageId)) pageId = FB_PAGE_ID_DEFAULT;
+  box.style.color = '#5a6472';
+  box.textContent = 'Probando...';
+  diagnosticarFacebook(token, pageId).then(function(r) {
+    box.style.color = r.ok ? '#1a8f4a' : '#c0392b';
+    box.textContent = r.msg;
+  });
+}
+
+// Al abrir el panel, avisa enseguida si la clave de Facebook no sirve, para
+// enterarse antes de publicar y no 2 minutos despues.
+setTimeout(function() {
+  var t = getFacebookToken();
+  if(!t) return;
+  diagnosticarFacebook(t, getFacebookPageId()).then(function(r) {
+    if(!r.ok) setStatus('⚠️ Facebook: ' + r.msg + ' (Botón 🔑 API)', 'err');
+  });
+}, 2000);
 function getFacebookToken() { return localStorage.getItem('fb_page_token') || ''; }
 function getInstagramUserId() { return localStorage.getItem('ig_user_id') || ''; }
 
