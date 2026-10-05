@@ -187,6 +187,12 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
 .modal-btn{width:100%;background:var(--navy);color:#fff;border:none;border-radius:6px;padding:11px;font-size:13px;font-weight:700;cursor:pointer}
 .modal-btn:hover{background:var(--sea)}
 .modal-err{color:var(--red);font-size:11px;margin-top:8px;display:none}
+.estado-claves{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.ec-chip{font-size:9px;font-weight:700;padding:3px 7px;border-radius:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);letter-spacing:.3px;white-space:nowrap}
+.ec-chip.ok{background:rgba(26,143,74,0.25);border-color:rgba(26,143,74,0.7);color:#7be0a4}
+.ec-chip.mal{background:rgba(192,57,43,0.3);border-color:rgba(231,76,60,0.8);color:#ff9d92}
+.ec-chip.aviso{background:rgba(230,160,30,0.22);border-color:rgba(230,160,30,0.7);color:#ffd27a}
+.modal-cerrar{display:block;width:100%;background:none;border:none;color:var(--muted);font-size:11px;margin-top:10px;cursor:pointer;text-decoration:underline}
 .empty{padding:40px 20px;text-align:center;color:var(--muted)}
 .empty-icon{font-size:36px;opacity:0.3;margin-bottom:10px}
 .empty-t{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px}
@@ -199,9 +205,10 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <div class="modal-box">
     <div class="modal-logo">ACTUALIDAD <span>MDP</span></div>
     <div class="modal-sub">Panel de Redacción</div>
-    <div class="modal-title">Ingresá tu clave API de Anthropic</div>
-    <div class="modal-desc">Las claves se guardan solo en tu navegador. Nadie más puede verlas.</div>
-    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px">CLAVE ANTHROPIC (para redactar)</label>
+    <div class="modal-title">Claves del panel</div>
+    <div class="modal-desc">Las claves se guardan solo en tu navegador. Nadie más puede verlas. Para publicar alcanza con el token de GitHub: las demás son opcionales.</div>
+    <div class="modal-hint" id="origen-aviso" style="display:none;color:#b9770e;font-weight:600"></div>
+    <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px">CLAVE ANTHROPIC (solo para redactar con IA, opcional)</label>
     <input class="modal-input" id="api-inp" type="password" placeholder="sk-ant-api03-..."/>
     <div class="modal-hint">Obtené tu clave en <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></div>
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">CLAVE GEMINI (para generar imágenes)</label>
@@ -210,6 +217,8 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">TOKEN DE GITHUB (para publicar en el sitio)</label>
     <input class="modal-input" id="github-inp" type="password" placeholder="github_pat_..."/>
     <div class="modal-hint">Creá un token en <a href="https://github.com/settings/personal-access-tokens/new" target="_blank">github.com/settings/personal-access-tokens/new</a>, con acceso solo al repositorio <strong>actualidad-mdp-web</strong> y permiso "Contents: Read and write". Opcional: sin esto podés seguir usando Copiar.</div>
+    <button type="button" class="mini-btn" style="margin:-10px 0 4px" onclick="probarGithubDesdeModal()">🔎 Probar GitHub</button>
+    <div class="modal-hint" id="gh-check" style="margin-top:4px"></div>
     <label style="font-size:11px;font-weight:700;color:#5a6472;letter-spacing:1px;display:block;margin-bottom:4px;margin-top:8px">CLAVE UNSPLASH (para buscar fotos libres)</label>
     <input class="modal-input" id="unsplash-inp" type="password" placeholder="Access Key..."/>
     <div class="modal-hint">Creá una app gratis en <a href="https://unsplash.com/oauth/applications" target="_blank">unsplash.com/oauth/applications</a> y copiá el "Access Key". Opcional.</div>
@@ -224,6 +233,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
     <input class="modal-input" id="igid-inp" type="text" placeholder="178414..."/>
     <div class="modal-hint">La cuenta tiene que ser Business y estar conectada a la página de Facebook. Usa el mismo token de arriba (con permisos instagram_basic e instagram_content_publish agregados). Opcional.</div>
     <button class="modal-btn" id="btn-entrar" onclick="guardarKey()">Entrar al panel →</button>
+    <button type="button" class="modal-cerrar" onclick="cerrarModalClaves()">Cerrar sin cambios</button>
     <div class="modal-err" id="api-err">Verificá las claves ingresadas.</div>
   </div>
 </div>
@@ -262,6 +272,7 @@ body{font-family:'Source Sans 3',sans-serif;background:var(--bg);color:var(--tex
   <div class="logo">ACTUALIDAD <span>MDP</span> <span style="font-family:'Source Sans 3',sans-serif;font-size:12px;font-weight:400;color:rgba(255,255,255,0.3);letter-spacing:0"> · Redacción</span></div>
   <div class="header-right">
     <span class="reloj" id="reloj"></span>
+    <span class="estado-claves" id="estado-claves"></span>
     <button class="btn-apikey" onclick="showModal()">🔑 API</button>
     <span class="badge">PRIVADO</span>
   </div>
@@ -898,18 +909,28 @@ function guardarKey() {
   var fbp = document.getElementById('fbpage-inp').value.trim();
   var fbt = document.getElementById('fbtoken-inp').value.trim();
   var igi = document.getElementById('igid-inp').value.trim();
+  var err = document.getElementById('api-err');
+  err.style.display = 'none';
   if(g) localStorage.setItem('gemini_key', g);
-  if(gh) localStorage.setItem('github_token', gh);
+  if(gh) { localStorage.setItem('github_token', gh); estadoGithubProbado = null; }
   if(un) localStorage.setItem('unsplash_key', un);
   if(fbp) localStorage.setItem('fb_page_id', fbp);
   if(fbt) localStorage.setItem('fb_page_token', fbt);
   if(igi) localStorage.setItem('ig_user_id', igi);
-  if(!k.startsWith('sk-ant-')) {
-    document.getElementById('api-err').style.display = 'block';
-    document.getElementById('api-err').textContent = 'La clave de Anthropic debe empezar con sk-ant-';
+  // La clave de Anthropic es opcional (solo hace falta para redactar con IA): vacia no bloquea nada.
+  if(k && !k.startsWith('sk-ant-')) {
+    err.textContent = 'La clave de Anthropic debe empezar con sk-ant- (o dejá ese campo vacío: las demás claves ya se guardaron).';
+    err.style.display = 'block';
+    renderEstadoClaves();
     return;
   }
-  localStorage.setItem('mdp_key', k);
+  if(k) { localStorage.setItem('mdp_key', k); anthropicRechazada = false; }
+  renderEstadoClaves();
+  document.getElementById('modal-api').style.display = 'none';
+  if(gh) verificarGithubSilencioso();
+}
+
+function cerrarModalClaves() {
   document.getElementById('modal-api').style.display = 'none';
 }
 
@@ -1000,7 +1021,141 @@ setTimeout(function() {
 function getFacebookToken() { return localStorage.getItem('fb_page_token') || ''; }
 function getInstagramUserId() { return localStorage.getItem('ig_user_id') || ''; }
 
+// ---- Estado de claves (indicador de la cabecera) y diagnostico de GitHub ----
+var ORIGEN_PRINCIPAL = 'https://merlojonatan1984.github.io';
+var estadoGithubProbado = null;   // {ok, msg} del ultimo diagnostico del token guardado (solo en memoria)
+var anthropicRechazada = false;   // true si Anthropic rechazo la clave en esta sesion (la clave NO se borra)
+
+// Nunca se muestra un token completo: solo el tipo y los ultimos 4 caracteres.
+function enmascararToken(t) {
+  if(!t) return '';
+  var pref = t.indexOf('github_pat_') === 0 ? 'github_pat_' : (t.indexOf('ghp_') === 0 ? 'ghp_' : '');
+  return pref + '…' + t.slice(-4);
+}
+
+function renderEstadoClaves() {
+  var cont = document.getElementById('estado-claves');
+  if(!cont) return;
+  var chips = [];
+  var gh = getGithubToken();
+  if(!gh) chips.push({n:'GitHub', c:'mal', i:'✗', t:'Falta el token de GitHub: sin él no se puede publicar. Tocá para cargarlo.'});
+  else if(estadoGithubProbado && !estadoGithubProbado.ok) chips.push({n:'GitHub', c:'mal', i:'⚠', t:estadoGithubProbado.msg});
+  else if(estadoGithubProbado && estadoGithubProbado.ok) chips.push({n:'GitHub', c:'ok', i:'✓', t:estadoGithubProbado.msg});
+  else chips.push({n:'GitHub', c:'ok', i:'✓', t:'Token de GitHub guardado (todavía no verificado). Tocá para probarlo.'});
+  if(anthropicRechazada) chips.push({n:'Anthropic', c:'mal', i:'⚠', t:'Anthropic rechazó la clave. No se borró: revisala. Solo afecta a redactar con IA, no a publicar.'});
+  else if(getKey()) chips.push({n:'Anthropic', c:'ok', i:'✓', t:'Clave de Anthropic guardada.'});
+  else chips.push({n:'Anthropic', c:'', i:'–', t:'Sin clave de Anthropic: solo hace falta para redactar con IA. Publicar no la necesita.'});
+  if(getGeminiKey()) chips.push({n:'Gemini', c:'ok', i:'✓', t:'Clave de Gemini guardada.'});
+  else chips.push({n:'Gemini', c:'', i:'–', t:'Sin clave de Gemini: solo hace falta para generar imágenes con IA.'});
+  if(getFacebookToken()) chips.push({n:'Facebook', c:'ok', i:'✓', t:'Clave de Facebook guardada.'});
+  else chips.push({n:'Facebook', c:'', i:'–', t:'Sin clave de Facebook: la nota se publica igual en el sitio, sin compartirse en Facebook/Instagram.'});
+  if(location.origin !== ORIGEN_PRINCIPAL) {
+    chips.push({n:'otra dirección', c:'aviso', i:'⚠', t:'Estás en ' + location.origin + '. Las claves se guardan por dirección: el panel principal está en ' + ORIGEN_PRINCIPAL + '/ACTUALIDAD-MDP/'});
+  }
+  cont.textContent = '';
+  chips.forEach(function(c) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ec-chip' + (c.c ? ' ' + c.c : '');
+    b.textContent = c.i + ' ' + c.n;
+    b.title = c.t;
+    b.onclick = showModal;
+    cont.appendChild(b);
+  });
+}
+
+function ghGet(path, token) {
+  return fetch('https://api.github.com' + path, {
+    headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json' }
+  }).then(function(r) {
+    return r.json().catch(function() { return {}; }).then(function(d) { return {status: r.status, data: d, headers: r.headers}; });
+  });
+}
+
+// Diagnostico exacto del token: invalido/vencido, sin acceso al repo, sin permiso de escritura, o todo OK.
+// Solo hace lecturas (nunca escribe en el repo).
+function diagnosticarGithub(token) {
+  if(!token) return Promise.resolve({ok:false, msg:'No hay token de GitHub cargado. Pegalo en el campo de arriba.'});
+  var etiqueta = enmascararToken(token);
+  var fino = token.indexOf('github_pat_') === 0;
+  var tipo = fino ? 'fine-grained' : (token.indexOf('ghp_') === 0 ? 'clásico' : 'de formato desconocido');
+  var repo = GITHUB_OWNER + '/' + GITHUB_REPO;
+  return ghGet('/user', token).then(function(u) {
+    if(u.status === 401) return {ok:false, msg:'Token INVÁLIDO O VENCIDO (' + etiqueta + '): GitHub lo rechaza. Generá uno nuevo en github.com/settings/tokens.'};
+    if(u.status === 403 && u.headers.get('x-github-sso')) return {ok:false, msg:'El token existe pero GitHub pide autorizarlo por SSO de la organización.'};
+    if(u.status === 403 || u.status === 429) return {ok:false, msg:'GitHub respondió ' + u.status + ' (' + (u.data.message || 'límite de uso') + '). Probá de nuevo en unos minutos.'};
+    if(u.status !== 200) return {ok:false, msg:'GitHub respondió ' + u.status + ' al verificar el token' + (u.data.message ? ': ' + u.data.message : '') + '.'};
+    var login = u.data.login || '?';
+    var vence = u.headers.get('github-authentication-token-expiration');
+    var textoVence = vence ? ' Vence: ' + vence + '.' : '';
+    return ghGet('/repos/' + repo, token).then(function(r) {
+      if(r.status === 404) {
+        var causa = login.toLowerCase() !== GITHUB_OWNER.toLowerCase()
+          ? 'El token es de la cuenta "' + login + '" y el repo es de "' + GITHUB_OWNER + '": generalo con la cuenta ' + GITHUB_OWNER + '.'
+          : (fino ? 'En "Repository access" elegí "Only select repositories" y marcá ' + GITHUB_REPO + '.'
+                  : 'Un token clásico necesita marcar el permiso "repo" completo.');
+        return {ok:false, msg:'Token válido (' + tipo + ', cuenta ' + login + ', ' + etiqueta + ') pero SIN ACCESO al repo ' + repo + ' (por eso publicar da "Not Found"). ' + causa};
+      }
+      if(r.status === 403) return {ok:false, msg:'Token válido (cuenta ' + login + ') pero GitHub le niega el acceso al repo (' + (r.data.message || '403') + ').'};
+      if(r.status !== 200) return {ok:false, msg:'GitHub respondió ' + r.status + ' al consultar el repo' + (r.data.message ? ': ' + r.data.message : '') + '.'};
+      var p = r.data.permissions;
+      if(p && p.push === false) {
+        return {ok:false, msg:'Token válido y ve el repo, pero SIN PERMISO DE ESCRITURA. ' + (fino ? 'En "Permissions → Repository permissions → Contents" poné "Read and write".' : 'Un token clásico necesita el permiso "repo".')};
+      }
+      var rama = r.data.default_branch || '?';
+      return ghGet('/repos/' + repo + '/contents/src/content', token).then(function(c) {
+        if(c.status !== 200) return {ok:false, msg:'Ve el repo pero no puede leer la carpeta donde se publican las notas (src/content): GitHub respondió ' + c.status + '.'};
+        var aviso = rama !== 'main' ? ' Atención: la rama principal del repo es "' + rama + '", no "main".' : '';
+        var escritura = p ? 'permiso de escritura confirmado' : 'el permiso de escritura se confirma al publicar';
+        return {ok: rama === 'main', msg:(rama === 'main' ? '✓ ' : '⚠ ') + 'Token válido (' + tipo + ', cuenta ' + login + ', ' + etiqueta + '). Ve ' + repo + ' (rama ' + rama + '), ' + escritura + '.' + textoVence + aviso};
+      });
+    });
+  }).catch(function(e) {
+    return {ok:false, msg:'No se pudo conectar con GitHub (' + e.message + '). Revisá tu conexión a internet.'};
+  });
+}
+
+function probarGithubDesdeModal() {
+  var box = document.getElementById('gh-check');
+  var escrito = document.getElementById('github-inp').value.trim();
+  var token = escrito || getGithubToken();
+  var esElGuardado = !escrito || escrito === getGithubToken();
+  box.style.color = '#5a6472';
+  box.textContent = 'Probando...';
+  diagnosticarGithub(token).then(function(r) {
+    box.style.color = r.ok ? '#1a8f4a' : '#c0392b';
+    box.textContent = r.msg;
+    if(esElGuardado) { estadoGithubProbado = r; renderEstadoClaves(); }
+  });
+}
+
+function verificarGithubSilencioso() {
+  var token = getGithubToken();
+  if(!token) return;
+  diagnosticarGithub(token).then(function(r) {
+    if(token !== getGithubToken()) return;
+    estadoGithubProbado = r;
+    renderEstadoClaves();
+    if(!r.ok) setStatus('⚠️ GitHub: ' + r.msg + ' (Botón 🔑 API → 🔎 Probar GitHub)', 'err');
+  });
+}
+
+// Traduce los errores de GitHub al publicar a algo accionable.
+function explicarErrorGithub(e) {
+  var m = (e && e.message) || '';
+  if(/^not found$/i.test(m)) return 'GitHub respondió "Not Found": el token no tiene acceso al repo ' + GITHUB_REPO + '. Abrí 🔑 API y apretá 🔎 Probar GitHub para ver el motivo exacto.';
+  if(/bad credentials/i.test(m)) return 'el token de GitHub es inválido o venció. Abrí 🔑 API y apretá 🔎 Probar GitHub.';
+  if(/resource not accessible/i.test(m)) return 'el token no tiene permiso de escritura (Contents: Read and write). Abrí 🔑 API y apretá 🔎 Probar GitHub.';
+  return m;
+}
+
 function showModal() {
+  document.getElementById('gh-check').textContent = '';
+  var av = document.getElementById('origen-aviso');
+  if(location.origin !== ORIGEN_PRINCIPAL) {
+    av.textContent = '⚠ Estás en ' + location.origin + '. Las claves se guardan por dirección: las del panel principal (' + ORIGEN_PRINCIPAL + '/ACTUALIDAD-MDP/) no están acá.';
+    av.style.display = 'block';
+  } else { av.style.display = 'none'; }
   document.getElementById('api-inp').value = getKey();
   document.getElementById('gemini-inp').value = getGeminiKey();
   document.getElementById('github-inp').value = getGithubToken();
@@ -1011,7 +1166,11 @@ function showModal() {
   document.getElementById('modal-api').style.display = 'flex';
 }
 
-if(getKey()) document.getElementById('modal-api').style.display = 'none';
+// Se oculta si hay al menos una clave guardada (antes exigia la de Anthropic).
+if(getKey() || getGithubToken()) document.getElementById('modal-api').style.display = 'none';
+else showModal();
+renderEstadoClaves();
+setTimeout(verificarGithubSilencioso, 2500);
 
 document.getElementById('api-inp').addEventListener('keydown', function(e) {
   if(e.key === 'Enter') guardarKey();
@@ -1256,9 +1415,14 @@ function llamarIA(prompt) {
     body: JSON.stringify({model:'claude-sonnet-5',max_tokens:4000,messages:[{role:'user',content:prompt}]})
   }).then(function(r) { return r.json(); }).then(function(d) {
     if(d.error) {
-      if(d.error.type === 'authentication_error') { localStorage.removeItem('mdp_key'); showModal(); }
+      if(d.error.type === 'authentication_error') {
+        anthropicRechazada = true;
+        renderEstadoClaves();
+        throw new Error('Anthropic rechazó la clave. No se borró: revisala en el botón 🔑 API. (' + d.error.message + ')');
+      }
       throw new Error(d.error.message);
     }
+    if(anthropicRechazada) { anthropicRechazada = false; renderEstadoClaves(); }
     var texto = (d.content || []).map(function(c) { return c.text || ''; }).join('');
     if(d.stop_reason === 'max_tokens') {
       texto += '\n\n⚠️ [EL TEXTO SE CORTÓ POR LARGO -- REVISALO ANTES DE PUBLICAR]';
@@ -2769,7 +2933,7 @@ function ejecutarPublicacion() {
       if(!redes) setStatus('✓ ' + (esEdicion ? 'Cambios guardados' : 'Publicado') + '. El sitio se actualiza solo en 1-2 minutos: ' + urlNota, 'ok');
     }
   }).catch(function(e) {
-    setStatus('Error al publicar: ' + e.message, 'err');
+    setStatus('Error al publicar: ' + explicarErrorGithub(e), 'err');
   }).finally(function() {
     btn.disabled = false;
   });
